@@ -7,8 +7,16 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
     #map {
       height: 100vh;
+      width: 100vw;
       background-color: #c9f7f7; /* light teal background */
     }
 
@@ -21,7 +29,7 @@
       position: absolute;
       top: 20px;
       right: 20px;
-      z-index: 1000;
+      z-index: 2000; /* high enough to be above the map */
       padding: 10px 20px;
       background-color: #ff4444;
       color: white;
@@ -30,6 +38,7 @@
       cursor: pointer;
       font-size: 14px;
       font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
 
     #loginBtn:hover {
@@ -58,13 +67,16 @@
     minZoom: 0,
     maxZoom: 5,
     maxBounds: bounds,
-    maxBoundsViscosity: 1.0
+    maxBoundsViscosity: 1.0,
+    zoomSnap: 0.5, // smoother zoom
+    zoomDelta: 0.5
   });
 
   L.imageOverlay('https://i.imgur.com/f4u7N6M.jpeg', bounds).addTo(map);
 
+  // Start zoomed in
   map.fitBounds(bounds);
-  map.setZoom(-5); // Start zoomed in
+  map.setZoom(1); // adjust this number to start closer in
 
   // ===============================
   // CTRL + CLICK COORDINATE TOOL
@@ -91,7 +103,6 @@
   // ===============================
   // REGION DEFINITIONS
   // ===============================
-
   var publicSafetyZone1 = L.polygon([
     [1631, 2199],
     [1590, 2234],
