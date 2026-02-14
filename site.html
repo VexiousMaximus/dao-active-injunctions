@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DAO Active Injunctions</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      height: 100vh;
+      background-color: #c9f7f7; /* light teal background */
+    }
+	.leaflet-interactive:focus {
+  outline: none;
+}
+
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  // ===============================
+  // IMAGE SETTINGS
+  // ===============================
+
+  var imageWidth = 3500;
+  var imageHeight = 3500;
+
+  var bounds = [[0, 0], [imageHeight, imageWidth]];
+
+  var map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: 0,
+    maxZoom: 5,
+    maxBounds: bounds,
+    maxBoundsViscosity: 1.0
+  });
+
+  L.imageOverlay('https://i.imgur.com/f4u7N6M.jpeg', bounds).addTo(map);
+
+  map.fitBounds(bounds);
+  map.setZoom(3); // Start zoomed in
+
+
+  // ===============================
+  // CTRL + CLICK COORDINATE TOOL
+  // ===============================
+
+  map.on('click', function(e) {
+    if (e.originalEvent.ctrlKey) {
+
+      var y = Math.round(e.latlng.lat);
+      var x = Math.round(e.latlng.lng);
+
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(
+          "<b>Coordinates:</b><br>" +
+          "[ " + y + ", " + x + " ]<br><br>" +
+          "Rectangle format example:<br>" +
+          "[[" + y + ", " + x + "], [Y2, X2]]"
+        )
+        .openOn(map);
+
+      console.log("Coordinate:", "[" + y + ", " + x + "]");
+    }
+  });
+
+
+  // ===============================
+  // REGION DEFINITIONS
+  // ===============================
+  // HOW TO ADD A NEW REGION:
+  //
+  // 1. Use CTRL + Click to find coordinates.
+  // 2. Replace the values below.
+  // 3. Change color and tooltip text.
+  //
+  // Format:
+  // L.rectangle([[topLeftY, topLeftX], [bottomRightY, bottomRightX]], options).addTo(map);
+
+
+  // ---- ACTIVE EXAMPLE REGION ----
+
+
+
+
+  // ---- TEMPLATE REGION (COPY THIS TO MAKE NEW ONES) ----
+  /*
+  var newRegion = L.rectangle(
+    [[1000, 1200], [1400, 1700]],  // Replace with your coordinates
+    {
+      color: "#0000ff",
+      weight: 1,
+      fillColor: "#0000ff",
+      fillOpacity: 0.4
+    }
+  ).addTo(map);
+
+  newRegion.bindTooltip("New Region Name", {
+    direction: "center"
+  });
+  */
+  
+  // ---- PUBLIC SAFETY ZONE 1 ----
+
+var publicSafetyZone1 = L.polygon([
+  [1631, 2199],
+  [1590, 2234],
+  [1499, 2230],
+  [1491, 2257],
+  [1301, 2234],
+  [1296, 2151],
+  [1262, 2113],
+  [1325, 2032],
+  [1333, 2015],
+  [1372, 2049],
+  [1409, 2002],
+  [1634, 2194] // closing point
+], {
+  color: "#ff0000",
+  weight: 2,
+  fillColor: "#ff0000",
+  fillOpacity: 0.4
+}).addTo(map);
+
+publicSafetyZone1.bindTooltip(
+  "PUBLIC SAFETY ZONE 1 - SOUTHSIDE LOCOS 13",
+  { direction: "center" }
+);
+
+
+
+</script>
+
+</body>
+</html>
