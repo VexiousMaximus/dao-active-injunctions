@@ -12,9 +12,28 @@
       background-color: #c9f7f7; /* light teal background */
     }
 
-    /* Remove weird focus outline on click */
     .leaflet-interactive:focus {
       outline: none;
+    }
+
+    /* Login button styling */
+    #loginBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 10px 20px;
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #loginBtn:hover {
+      background-color: #ff2222;
     }
   </style>
 </head>
@@ -22,19 +41,21 @@
 
 <div id="map"></div>
 
+<!-- Sign in button -->
+<button id="loginBtn">Sign in with GTA World</button>
+
 <script>
   // ===============================
-  // IMAGE SETTINGS
+  // MAP SETUP
   // ===============================
 
   var imageWidth = 3500;
   var imageHeight = 3500;
-
   var bounds = [[0, 0], [imageHeight, imageWidth]];
 
   var map = L.map('map', {
     crs: L.CRS.Simple,
-    minZoom: -5,
+    minZoom: 0,
     maxZoom: 5,
     maxBounds: bounds,
     maxBoundsViscosity: 1.0
@@ -43,17 +64,13 @@
   L.imageOverlay('https://i.imgur.com/f4u7N6M.jpeg', bounds).addTo(map);
 
   map.fitBounds(bounds);
-
-  // Start zoomed in properly
-  map.setZoom(3);
+  map.setZoom(-5); // Start zoomed in
 
   // ===============================
   // CTRL + CLICK COORDINATE TOOL
   // ===============================
-
   map.on('click', function(e) {
     if (e.originalEvent.ctrlKey) {
-
       var y = Math.round(e.latlng.lat);
       var x = Math.round(e.latlng.lng);
 
@@ -75,7 +92,6 @@
   // REGION DEFINITIONS
   // ===============================
 
-  // ---- PUBLIC SAFETY ZONE 1 ----
   var publicSafetyZone1 = L.polygon([
     [1631, 2199],
     [1590, 2234],
@@ -101,7 +117,6 @@
     { direction: "center" }
   );
 
-  // ---- HALL OF JUSTICE / DAO OPS ----
   var hallofjustice = L.polygon([
     [1506, 2066],
     [1595, 1962],
@@ -120,23 +135,16 @@
   );
 
   // ===============================
-  // TEMPLATE FOR NEW REGIONS
+  // GTA WORLD LOGIN BUTTON
   // ===============================
-  /*
-  var newRegion = L.rectangle(
-    [[1000, 1200], [1400, 1700]],
-    {
-      color: "#0000ff",
-      weight: 2,
-      fillColor: "#0000ff",
-      fillOpacity: 0.4
-    }
-  ).addTo(map);
+  const clientId = "YOUR_CLIENT_ID"; // Replace with your GTA World client ID
+  const redirectUri = "https://your-render-domain.onrender.com/auth/callback"; // Replace with your Render URL
 
-  newRegion.bindTooltip("New Region Name", {
-    direction: "center"
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
+    window.location.href = authUrl;
   });
-  */
+
 </script>
 
 </body>
