@@ -11,10 +11,11 @@
       height: 100vh;
       background-color: #c9f7f7; /* light teal background */
     }
-	.leaflet-interactive:focus {
-  outline: none;
-}
 
+    /* Remove weird focus outline on click */
+    .leaflet-interactive:focus {
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +34,7 @@
 
   var map = L.map('map', {
     crs: L.CRS.Simple,
-    minZoom: 0,
+    minZoom: -5,
     maxZoom: 5,
     maxBounds: bounds,
     maxBoundsViscosity: 1.0
@@ -42,8 +43,9 @@
   L.imageOverlay('https://i.imgur.com/f4u7N6M.jpeg', bounds).addTo(map);
 
   map.fitBounds(bounds);
-  map.setZoom(-5); // Start zoomed in
 
+  // Start zoomed in properly
+  map.setZoom(3);
 
   // ===============================
   // CTRL + CLICK COORDINATE TOOL
@@ -69,32 +71,63 @@
     }
   });
 
-
   // ===============================
   // REGION DEFINITIONS
   // ===============================
-  // HOW TO ADD A NEW REGION:
-  //
-  // 1. Use CTRL + Click to find coordinates.
-  // 2. Replace the values below.
-  // 3. Change color and tooltip text.
-  //
-  // Format:
-  // L.rectangle([[topLeftY, topLeftX], [bottomRightY, bottomRightX]], options).addTo(map);
 
+  // ---- PUBLIC SAFETY ZONE 1 ----
+  var publicSafetyZone1 = L.polygon([
+    [1631, 2199],
+    [1590, 2234],
+    [1499, 2230],
+    [1491, 2257],
+    [1301, 2234],
+    [1296, 2151],
+    [1262, 2113],
+    [1325, 2032],
+    [1333, 2015],
+    [1372, 2049],
+    [1409, 2002],
+    [1634, 2194]
+  ], {
+    color: "#ff0000",
+    weight: 2,
+    fillColor: "#ff0000",
+    fillOpacity: 0.4
+  }).addTo(map);
 
-  // ---- ACTIVE EXAMPLE REGION ----
+  publicSafetyZone1.bindTooltip(
+    "PUBLIC SAFETY ZONE 1 - SOUTHSIDE LOCOS 13",
+    { direction: "center" }
+  );
 
+  // ---- HALL OF JUSTICE / DAO OPS ----
+  var hallofjustice = L.polygon([
+    [1506, 2066],
+    [1595, 1962],
+    [1635, 2036],
+    [1569, 2116]
+  ], {
+    color: "#23FA00",
+    weight: 2,
+    fillColor: "#23FA00",
+    fillOpacity: 0.4
+  }).addTo(map);
 
+  hallofjustice.bindTooltip(
+    "HALL OF JUSTICE / DAO OPS",
+    { direction: "center" }
+  );
 
-
-  // ---- TEMPLATE REGION (COPY THIS TO MAKE NEW ONES) ----
+  // ===============================
+  // TEMPLATE FOR NEW REGIONS
+  // ===============================
   /*
   var newRegion = L.rectangle(
-    [[1000, 1200], [1400, 1700]],  // Replace with your coordinates
+    [[1000, 1200], [1400, 1700]],
     {
       color: "#0000ff",
-      weight: 1,
+      weight: 2,
       fillColor: "#0000ff",
       fillOpacity: 0.4
     }
@@ -104,54 +137,7 @@
     direction: "center"
   });
   */
-  
-  // ---- PUBLIC SAFETY ZONE 1 ----
-
-var publicSafetyZone1 = L.polygon([
-  [1631, 2199],
-  [1590, 2234],
-  [1499, 2230],
-  [1491, 2257],
-  [1301, 2234],
-  [1296, 2151],
-  [1262, 2113],
-  [1325, 2032],
-  [1333, 2015],
-  [1372, 2049],
-  [1409, 2002],
-  [1634, 2194] // closing point
-], {
-  color: "#ff0000",
-  weight: 2,
-  fillColor: "#ff0000",
-  fillOpacity: 0.4
-}).addTo(map);
-
-publicSafetyZone1.bindTooltip(
-  "PUBLIC SAFETY ZONE 1 - SOUTHSIDE LOCOS 13",
-  { direction: "center" }
-);
-var hallofjustice = L.polygon([
-[ 1506, 2066 ],[ 1595, 1962 ],[ 1635, 2036 ],[ 1569, 2116 ] // closing point
-], {
-  color: "23FA00",
-  weight: 2,
-  fillColor: "23FA00,
-  fillOpacity: 0.4
-}).addTo(map);
-
-hallofjustice.bindTooltip(
-  "HALL OF JUSTICE/ DAO OPS",
-  { direction: "center" }
-);
-
-
 </script>
 
 </body>
 </html>
-
-
-
-
-
