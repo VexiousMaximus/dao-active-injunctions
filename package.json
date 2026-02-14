@@ -1,0 +1,16 @@
+{
+  "name": "gtaw-backend",
+  "version": "1.0.0",
+  "description": "Backend for GTA World OAuth",
+  "main": "backend.js",
+  "scripts": {
+    "start": "node backend.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
