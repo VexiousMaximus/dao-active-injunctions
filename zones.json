@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": 1771451956007,
+    "name": "HOJ / LSSD DVS",
+    "points": [
+      [
+        1506.5,
+        2065.5
+      ],
+      [
+        1566,
+        2117.5
+      ],
+      [
+        1635,
+        2035.5
+      ],
+      [
+        1592,
+        1961.5
+      ]
+    ],
+    "color": "#34aa09",
+    "info": "HOJ / LSSD DVS",
+    "mugshots": [],
+    "creator": "CertifiedKiller"
+  }
+]
