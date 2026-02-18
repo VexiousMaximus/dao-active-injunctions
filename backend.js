@@ -1,51 +1,76 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
 const app = express();
+const path = require('path');
 
-app.use(express.json());
-app.use(cors()); // allow GitHub Pages frontend to fetch
+// ✅ Environment variables
+const clientId = process.env.GTAW_CLIENT_ID;
+const clientSecret = process.env.GTAW_CLIENT_SECRET;
+const redirectUri = process.env.GTAW_REDIRECT_URI;
 
-// In-memory storage
+// In-memory zones storage
 let zones = [];
-let zoneIdCounter = 1;
 
-// DAO password for edits
-const DAO_PASSWORD = "daopassword2026";
+// Middleware
+app.use(express.json());
+app.use(express.static(__dirname)); // Serve files from main branch
 
-// ===== GET ALL ZONES (public) =====
-app.get('/zones', (req, res) => {
-  res.json(zones);
+// Serve index.html at /
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ===== CREATE NEW ZONE =====
-app.post('/zones', (req, res) => {
-  const { password, name, points, color, info, mugshots } = req.body;
-  if (password !== DAO_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  if (!name || !points || points.length < 3) return res.status(400).json({ error: "Invalid zone data" });
+// OAuth callback
+app.get('/auth/callback', async (req, res) => {
+    const code = req.query.code;
+    if(!code) return res.send("No code provided");
 
-  const zone = {
-    id: zoneIdCounter++,
-    name,
-    points,
-    color: color || "#0000FF",
-    info: info || "",
-    mugshots: mugshots || [],
-    createdBy: "DAO User"
-  };
-  zones.push(zone);
-  res.json(zone);
+    try {
+        const tokenRes = await axios.post(
+            'https://ucp.gta.world/oauth/token',
+            new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: redirectUri,
+                code: code
+            }),
+            { headers: { 'Content-Type':'application/x-www-form-urlencoded' } }
+        );
+        const accessToken = tokenRes.data.access_token;
+
+        const userRes = await axios.get('https://ucp.gta.world/api/user',{
+            headers:{ Authorization: `Bearer ${accessToken}` }
+        });
+        const userData = userRes.data;
+
+        // Redirect back to main page with username
+        res.redirect(`/?username=${encodeURIComponent(userData.user.username)}`);
+    } catch(err){
+        console.error(err.response?.data || err.message);
+        res.send("OAuth login failed");
+    }
 });
 
-// ===== DELETE ZONE =====
-app.delete('/zones/:id', (req, res) => {
-  const { password } = req.body;
-  if (password !== DAO_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+// Get all zones
+app.get('/zones', (req,res)=>res.json(zones));
 
-  const id = parseInt(req.params.id);
-  zones = zones.filter(z => z.id !== id);
-  res.json({ success: true });
+// Create new zone
+app.post('/zones', (req,res)=>{
+    const { name, points, color, info, mugshots, creator, password } = req.body;
+    if(password !== "daopassword2026") return res.status(401).json({error:"Unauthorized"});
+    const zone = { id: Date.now(), name, points, color, info, mugshots, creator };
+    zones.push(zone);
+    res.json(zone);
+});
+
+// Delete zone
+app.delete('/zones/:id', (req,res)=>{
+    const { password } = req.body;
+    if(password !== "daopassword2026") return res.status(401).json({error:"Unauthorized"});
+    zones = zones.filter(z => z.id != req.params.id);
+    res.json({success:true});
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
