@@ -1,128 +1,95 @@
 const express = require('express');
-const axios = require('axios');
+const cors = require('cors');
+
 const app = express();
 
 // ===============================
 // CONFIG
 // ===============================
-const clientId = process.env.GTAW_CLIENT_ID;
-const clientSecret = process.env.GTAW_CLIENT_SECRET;
-const redirectUri = process.env.GTAW_REDIRECT_URI;
-
-// DAO creation password
 const DAO_PASSWORD = "daopassword2026";
-
-// In-memory zone storage
-// (Replace with DB later if desired)
-let zones = [];
 
 // ===============================
 // MIDDLEWARE
 // ===============================
-app.use(express.json()); // parse JSON bodies
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "DELETE"],
+    allowedHeaders: ["Content-Type"]
+}));
+
+app.use(express.json({ limit: "2mb" }));
 
 // ===============================
-// HEALTH CHECK
+// ZONE STORAGE (memory)
+// ===============================
+let zones = [];
+
+// ===============================
+// HEALTH
 // ===============================
 app.get('/', (req, res) => {
-    res.send("DAO Active Injunctions API running 👍");
+    res.send("DAO Zones backend running 👍");
 });
 
 // ===============================
-// GTAW OAUTH CALLBACK
-// ===============================
-app.get('/auth/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.send("No code provided");
-
-    try {
-        // Exchange code for token
-        const tokenRes = await axios.post(
-            'https://ucp.gta.world/oauth/token',
-            new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                code: code
-            }),
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
-
-        const accessToken = tokenRes.data.access_token;
-
-        // Get user info
-        const userRes = await axios.get(
-            'https://ucp.gta.world/api/user',
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-
-        const username = userRes.data.user.username;
-
-        // Redirect back to GitHub Pages frontend
-        res.redirect(
-            `https://vexiousmaximus.github.io/dao-active-injunctions/?username=${encodeURIComponent(username)}`
-        );
-
-    } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.status(500).send("OAuth login failed");
-    }
-});
-
-// ===============================
-// GET ALL ZONES (PUBLIC)
+// GET ALL ZONES
 // ===============================
 app.get('/zones', (req, res) => {
     res.json(zones);
 });
 
 // ===============================
-// CREATE ZONE (PASSWORD PROTECTED)
+// CREATE ZONE (password protected)
 // ===============================
 app.post('/zones', (req, res) => {
-    const {
-        name,
-        points,
-        username,
-        password,
-        color,
-        fillOpacity,
-        info,
-        images
-    } = req.body;
+    try {
+        const { password, zone } = req.body;
 
-    // Password check
+        if (password !== DAO_PASSWORD) {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        if (!zone) {
+            return res.status(400).json({ error: "Missing zone data" });
+        }
+
+        if (!zone.name || !zone.points || zone.points.length < 3) {
+            return res.status(400).json({ error: "Invalid zone geometry" });
+        }
+
+        const newZone = {
+            id: Date.now(),
+            name: zone.name,
+            points: zone.points,
+            color: zone.color || "#ff0000",
+            opacity: zone.opacity ?? 0.4,
+            info: zone.info || "",
+            mugshots: zone.mugshots || [],
+            createdBy: zone.createdBy || "Unknown"
+        };
+
+        zones.push(newZone);
+
+        res.json({ success: true, zone: newZone });
+    } catch (err) {
+        console.error("ZONE SAVE ERROR:", err);
+        res.status(500).json({ error: "Server error saving zone" });
+    }
+});
+
+// ===============================
+// DELETE ZONE (password protected)
+// ===============================
+app.delete('/zones/:id', (req, res) => {
+    const { password } = req.body;
+    const id = Number(req.params.id);
+
     if (password !== DAO_PASSWORD) {
         return res.status(403).json({ error: "Unauthorized" });
     }
 
-    if (!name || !points || !Array.isArray(points) || points.length < 3) {
-        return res.status(400).json({ error: "Invalid zone data" });
-    }
-
-    const zone = {
-        id: Date.now(), // simple unique id
-        name,
-        points,
-        createdBy: username || "Unknown",
-        color: color || "#0000FF",
-        fillOpacity: fillOpacity ?? 0.4,
-        info: info || "",
-        images: Array.isArray(images) ? images : []
-    };
-
-    zones.push(zone);
-
-    res.json(zone);
-});
-
-// ===============================
-// DELETE ZONE (optional future)
-// ===============================
-app.delete('/zones/:id', (req, res) => {
-    const id = Number(req.params.id);
     zones = zones.filter(z => z.id !== id);
+
     res.json({ success: true });
 });
 
@@ -131,5 +98,5 @@ app.delete('/zones/:id', (req, res) => {
 // ===============================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`DAO API running on port ${PORT}`);
+    console.log(`DAO backend running on port ${PORT}`);
 });
