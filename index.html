@@ -62,8 +62,9 @@ border-radius:6px;border:1px solid #ddd
 
 <div id="editorSidebar" class="sidebar">
 <div class="sidebar-header">Create Injunction Zone</div>
-<button class="closeBtn" onclick="editorSidebar.classList.remove('show')">×</button>
+<button class="closeBtn" onclick="closeEditor()">×</button>
 <div class="sidebar-content">
+
 <div class="label">Zone Name</div>
 <input id="zoneName" class="input">
 
@@ -76,10 +77,11 @@ border-radius:6px;border:1px solid #ddd
 <div class="label">Additional Info</div>
 <textarea id="zoneInfo"></textarea>
 
-<div class="label">Mugshot URLs (comma separated)</div>
+<div class="label">Mugshot URLs</div>
 <textarea id="zoneImages"></textarea>
 
 <button id="saveZoneBtn" class="saveBtn" style="display:none">Save Zone</button>
+
 </div>
 </div>
 
@@ -102,10 +104,11 @@ L.imageOverlay('./lsmap.jpeg',bounds).addTo(map);
 map.fitBounds(bounds);map.setZoom(1);
 
 let zones=[];
+let polygons=[];
 let drawing=false;
+let approved=false;
 let tempPoints=[];
 let tempPoly=null;
-let approved=false;
 
 const params=new URLSearchParams(window.location.search);
 const username=params.get('username');
@@ -119,6 +122,7 @@ loginBtn.onclick=()=>{
 location.href=`https://ucp.gta.world/oauth/authorize?client_id=130&redirect_uri=${encodeURIComponent("https://dao-active-injunctions.onrender.com/auth/callback")}&response_type=code`
 };
 
+/* ================= LOAD ZONES ================= */
 function fetchZones(){
 fetch(`${API}/zones`)
 .then(r=>r.json())
@@ -129,56 +133,83 @@ renderZones();
 }
 
 function renderZones(){
+polygons.forEach(p=>map.removeLayer(p));
+polygons=[];
+
 zones.forEach(z=>{
 const poly=L.polygon(z.points,{
-color:z.color,fillOpacity:z.fillOpacity
+color:z.color,
+fillOpacity:z.fillOpacity
 }).addTo(map).bindTooltip(z.name,{direction:"center"});
 
 poly.on('click',()=>showZone(z));
+polygons.push(poly);
 });
 }
 
+/* ================= VIEWER ================= */
 function showZone(z){
 viewName.textContent=z.name;
 viewCreator.textContent="Created by: "+z.createdBy;
 viewInfo.textContent=z.info||"";
 viewImages.innerHTML="";
+
 (z.images||[]).forEach(u=>{
 const img=document.createElement('img');
 img.src=u;
 viewImages.appendChild(img);
 });
+
 viewerSidebar.classList.add('show');
 }
 
+/* ================= CREATE ================= */
 createZoneBtn.onclick=()=>{
 if(!username)return alert("Login required");
+
 const pass=prompt("Enter DAO password:");
 if(pass!=="daopassword2026")return alert("Incorrect password");
 
 approved=true;
-saveZoneBtn.style.display='block';
 drawing=true;
 tempPoints=[];
+
 if(tempPoly)map.removeLayer(tempPoly);
+
 editorSidebar.classList.add('show');
+saveZoneBtn.style.display='block';
 };
 
+/* ================= DRAW ================= */
 map.on('click',e=>{
 if(!drawing)return;
+
 tempPoints.push([e.latlng.lat,e.latlng.lng]);
+updateTempPolygon();
+});
+
+function updateTempPolygon(){
 if(tempPoly)map.removeLayer(tempPoly);
+
 tempPoly=L.polygon(tempPoints,{
 color:zoneColor.value,
 fillOpacity:parseFloat(zoneOpacity.value)
 }).addTo(map);
-});
+}
 
-saveZoneBtn.onclick=()=>{
-if(!approved)return;
+/* live style updates */
+zoneColor.oninput=updateTempPolygon;
+zoneOpacity.oninput=updateTempPolygon;
+
+/* ================= SAVE ================= */
+saveZoneBtn.onclick=async()=>{
+if(!approved || tempPoints.length<3){
+alert("Need at least 3 points");
+return;
+}
 
 const zone={
-name:zoneName.value,
+name:zoneName.value||"Unnamed Zone",
 points:tempPoints,
 username,
 password:"daopassword2026",
@@ -188,20 +219,43 @@ info:zoneInfo.value,
 images:zoneImages.value.split(',').map(s=>s.trim()).filter(Boolean)
 };
 
-fetch(`${API}/zones`,{
+try{
+const res=await fetch(`${API}/zones`,{
 method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify(zone)
-})
-.then(r=>r.json())
-.then(z=>{
-zones.push(z);
-renderZones();
-drawing=false;
-editorSidebar.classList.remove('show');
-if(tempPoly)map.removeLayer(tempPoly);
 });
+
+if(!res.ok){
+alert("Save failed");
+return;
+}
+
+const saved=await res.json();
+zones.push(saved);
+
+finishDrawing();
+renderZones();
+
+}catch(e){
+console.error(e);
+alert("Server error");
+}
 };
+
+/* ================= FINISH ================= */
+function finishDrawing(){
+drawing=false;
+approved=false;
+tempPoints=[];
+if(tempPoly)map.removeLayer(tempPoly);
+editorSidebar.classList.remove('show');
+}
+
+/* ================= CLOSE ================= */
+function closeEditor(){
+finishDrawing();
+}
 
 fetchZones();
 </script>
