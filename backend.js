@@ -2,46 +2,64 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-const clientId = "130";       // Replace with your GTA World OAuth client ID
-const clientSecret = "46L1fIKfWmZI98uDaBzjTEGpT8P4PM9VHTYXexbl"; // Replace with your GTA World OAuth client secret
-const redirectUri = "https://your-render-domain.onrender.com/auth/callback"; // Render URL
+// ✅ Use environment variables (DO NOT hardcode secrets)
+const clientId = process.env.GTAW_CLIENT_ID;
+const clientSecret = process.env.GTAW_CLIENT_SECRET;
+const redirectUri = process.env.GTAW_REDIRECT_URI;
 
-// Serve static files (optional if you also host frontend here)
-app.use(express.static('public'));
+// Optional: simple health route
+app.get('/', (req, res) => {
+    res.send("GTAW OAuth backend running 👍");
+});
 
 app.get('/auth/callback', async (req, res) => {
     const code = req.query.code;
-    if (!code) return res.send("No code provided");
+
+    if (!code) {
+        return res.send("No code provided");
+    }
 
     try {
-        // Exchange code for token
-        const tokenRes = await axios.post('https://ucp.gta.world/oauth/token', null, {
-            params: {
+        // Exchange authorization code for access token
+        const tokenRes = await axios.post(
+            'https://ucp.gta.world/oauth/token',
+            new URLSearchParams({
                 grant_type: 'authorization_code',
                 client_id: clientId,
                 client_secret: clientSecret,
                 redirect_uri: redirectUri,
                 code: code
+            }),
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             }
-        });
+        );
 
         const accessToken = tokenRes.data.access_token;
 
-        // Get user info
-        const userRes = await axios.get('https://ucp.gta.world/api/user', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
+        // Fetch user info
+        const userRes = await axios.get(
+            'https://ucp.gta.world/api/user',
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        );
 
         const userData = userRes.data;
 
-        // Send back some HTML or JSON
         res.send(`
-            <h1>Hello, ${userData.user.username}!</h1>
-            <p>Go back to your <a href="/">map</a></p>
+            <h1>Hello, ${userData.user.username} 👋</h1>
+            <p>Login successful.</p>
+            <p><a href="/">Go back to map</a></p>
         `);
+
     } catch (err) {
-        console.error(err);
-        res.send("Login error");
+        console.error(err.response?.data || err.message);
+        res.json(err.response?.data || { error: "OAuth failed" });
     }
 });
 
