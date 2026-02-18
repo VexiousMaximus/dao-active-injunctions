@@ -2,157 +2,124 @@
 <html>
 <head>
   <title>DAO Active Injunctions</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+    #map { height:100vh; width:100vw; background:#c9f7f7; }
+    .leaflet-interactive:focus { outline:none; }
 
-    #map {
-      height: 100vh;
-      width: 100vw;
-      background-color: #c9f7f7; /* light teal background */
+    /* Buttons */
+    #loginBtn, #createZoneBtn {
+      position:absolute; right:20px; padding:10px 20px; border:none; border-radius:5px;
+      font-weight:bold; font-size:14px; cursor:pointer; z-index:2000;
     }
-
-    .leaflet-interactive:focus {
-      outline: none;
-    }
-
-    /* Login button styling */
-    #loginBtn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 2000; /* above the map */
-      padding: 10px 20px;
-      background-color: #ff4444;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-
-    #loginBtn:hover {
-      background-color: #ff2222;
-    }
+    #loginBtn { top:20px; background:#ff4444; color:white; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+    #loginBtn:hover { background:#ff2222; }
+    #createZoneBtn { top:60px; background:#2288ff; color:white; display:none; }
+    #createZoneBtn:hover { background:#0066ff; }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
-
-<!-- Sign in button -->
 <button id="loginBtn">Sign in with GTA World</button>
+<button id="createZoneBtn">Create New Zone</button>
 
 <script>
   // ===============================
   // MAP SETUP
   // ===============================
-  var imageWidth = 3500;
-  var imageHeight = 3500;
-  var bounds = [[0, 0], [imageHeight, imageWidth]];
-
-  var map = L.map('map', {
-    crs: L.CRS.Simple,
-    minZoom: 0,
-    maxZoom: 5,
-    maxBounds: bounds,
-    maxBoundsViscosity: 1.0,
-    zoomSnap: 0.5,
-    zoomDelta: 0.5
+  const imageWidth = 3500, imageHeight = 3500;
+  const bounds = [[0,0],[imageHeight,imageWidth]];
+  const map = L.map('map', {
+    crs: L.CRS.Simple, minZoom:0, maxZoom:5, maxBounds:bounds,
+    maxBoundsViscosity:1, zoomSnap:0.5, zoomDelta:0.5
   });
-
   L.imageOverlay('lsmap.jpeg', bounds).addTo(map);
+  map.fitBounds(bounds); map.setZoom(1);
 
-  map.fitBounds(bounds);
-  map.setZoom(1);
-
-  // ===============================
-  // CTRL + CLICK COORDINATE TOOL
-  // ===============================
-  map.on('click', function(e) {
+  // CTRL+CLICK coordinates popup
+  map.on('click', e => {
     if (e.originalEvent.ctrlKey) {
-      var y = Math.round(e.latlng.lat);
-      var x = Math.round(e.latlng.lng);
-
-      L.popup()
-        .setLatLng(e.latlng)
-        .setContent(
-          "<b>Coordinates:</b><br>" +
-          "[ " + y + ", " + x + " ]<br><br>" +
-          "Rectangle format example:<br>" +
-          "[[" + y + ", " + x + "], [Y2, X2]]"
-        )
-        .openOn(map);
-
-      console.log("Coordinate:", "[" + y + ", " + x + "]");
+      const y=Math.round(e.latlng.lat), x=Math.round(e.latlng.lng);
+      L.popup().setLatLng(e.latlng).setContent(`<b>Coordinates:</b><br>[ ${y}, ${x} ]`).openOn(map);
+      console.log("Coordinate:", `[${y}, ${x}]`);
     }
   });
 
   // ===============================
-  // REGION DEFINITIONS
+  // AUTH LOGIN
   // ===============================
-  var publicSafetyZone1 = L.polygon([
-    [1631, 2199],
-    [1590, 2234],
-    [1499, 2230],
-    [1491, 2257],
-    [1301, 2234],
-    [1296, 2151],
-    [1262, 2113],
-    [1325, 2032],
-    [1333, 2015],
-    [1372, 2049],
-    [1409, 2002],
-    [1634, 2194]
-  ], {
-    color: "#ff0000",
-    weight: 2,
-    fillColor: "#ff0000",
-    fillOpacity: 0.4
-  }).addTo(map);
-
-  publicSafetyZone1.bindTooltip(
-    "PUBLIC SAFETY ZONE 1 - SOUTHSIDE LOCOS 13",
-    { direction: "center" }
-  );
-
-  var hallofjustice = L.polygon([
-    [1506, 2066],
-    [1595, 1962],
-    [1635, 2036],
-    [1569, 2116]
-  ], {
-    color: "#23FA00",
-    weight: 2,
-    fillColor: "#23FA00",
-    fillOpacity: 0.4
-  }).addTo(map);
-
-  hallofjustice.bindTooltip(
-    "HALL OF JUSTICE / DAO OPS",
-    { direction: "center" }
-  );
-
-  // ===============================
-  // GTA WORLD LOGIN BUTTON
-  // ===============================
-  const clientId = "130"; // Your GTAW OAuth client ID
+  const clientId = "130"; // GTAW client ID
   const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback";
 
   document.getElementById('loginBtn').addEventListener('click', () => {
     const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
     window.location.href = authUrl;
   });
+
+  // ===============================
+  // Parse URL for logged-in user
+  // ===============================
+  const params = new URLSearchParams(window.location.search);
+  const username = params.get('username');
+  const faction = params.get('faction');
+
+  if (username && faction) {
+    console.log(`Logged in as ${username} in faction ${faction}`);
+    document.getElementById('loginBtn').style.display = 'none';
+
+    // Only DAO can create zones
+    if (faction === "District Attorney's Office") {
+      document.getElementById('createZoneBtn').style.display = 'block';
+    }
+  }
+
+  // ===============================
+  // LOAD EXISTING ZONES
+  // ===============================
+  fetch('/zones').then(res => res.json()).then(data => {
+    data.forEach(zone => {
+      L.polygon(zone.points, { color:"#0000FF", fillOpacity:0.4 })
+       .addTo(map).bindTooltip(zone.name, {direction:"center"});
+    });
+  });
+
+  // ===============================
+  // CREATE NEW ZONE
+  // ===============================
+  let drawingZone=false, tempPoints=[], tempPolygon=null;
+
+  const createBtn = document.getElementById('createZoneBtn');
+  createBtn.addEventListener('click', () => {
+    drawingZone = true; tempPoints=[]; alert("Click points for the zone. Press 'S' to save.");
+  });
+
+  map.on('click', e => {
+    if (!drawingZone) return;
+    tempPoints.push([e.latlng.lat, e.latlng.lng]);
+    if(tempPolygon) map.removeLayer(tempPolygon);
+    tempPolygon = L.polygon(tempPoints, {color:"#0000FF", fillOpacity:0.4}).addTo(map);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (drawingZone && e.key.toLowerCase() === 's') {
+      const zoneName = prompt("Enter zone name:");
+      if (!zoneName) return alert("Zone must have a name!");
+      fetch('/zones', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:zoneName, points:tempPoints})
+      }).then(res=>res.json()).then(data=>{
+        alert("Zone saved!");
+        drawingZone=false; tempPoints=[]; tempPolygon=null;
+        L.polygon(data.points, {color:"#0000FF", fillOpacity:0.4})
+          .addTo(map).bindTooltip(data.name, {direction:"center"});
+      });
+    }
+  });
+
 </script>
 
 </body>
