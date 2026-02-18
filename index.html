@@ -63,15 +63,11 @@
   // ===============================
   const params = new URLSearchParams(window.location.search);
   const username = params.get('username');
-  const faction = params.get('faction');
 
   if (username) {
-    console.log(`Logged in as ${username}, faction: ${faction}`);
+    console.log(`Logged in as ${username}`);
     document.getElementById('loginBtn').style.display = 'none';
-
-    if (faction === "District Attorney's Office") {
-      document.getElementById('createZoneBtn').style.display = 'block';
-    }
+    document.getElementById('createZoneBtn').style.display = 'block';
   }
 
   // ===============================
@@ -80,7 +76,8 @@
   fetch('/zones').then(res => res.json()).then(data => {
     data.forEach(zone => {
       L.polygon(zone.points, { color:"#0000FF", fillOpacity:0.4 })
-       .addTo(map).bindTooltip(zone.name, {direction:"center"});
+       .addTo(map)
+       .bindTooltip(`${zone.name}<br>created by: ${zone.createdBy}`, {direction:"center"});
     });
   });
 
@@ -91,6 +88,10 @@
 
   const createBtn = document.getElementById('createZoneBtn');
   createBtn.addEventListener('click', () => {
+    if (!username) return alert("You must be signed in to create zones");
+    const enteredPassword = prompt("Enter password to create a new zone:");
+    if (enteredPassword !== "daopassword2026") return alert("Invalid password!");
+
     drawingZone = true; tempPoints=[]; alert("Click points for the zone. Press 'S' to save.");
   });
 
@@ -108,12 +109,13 @@
       fetch('/zones', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:zoneName, points:tempPoints})
+        body:JSON.stringify({name:zoneName, points:tempPoints, username, password:"daopassword2026"})
       }).then(res=>res.json()).then(data=>{
         alert("Zone saved!");
         drawingZone=false; tempPoints=[]; tempPolygon=null;
         L.polygon(data.points, {color:"#0000FF", fillOpacity:0.4})
-          .addTo(map).bindTooltip(data.name, {direction:"center"});
+          .addTo(map)
+          .bindTooltip(`${data.name}<br>created by: ${data.createdBy}`, {direction:"center"});
       });
     }
   });
