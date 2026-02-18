@@ -1,26 +1,43 @@
+// backend.js
 const express = require('express');
 const axios = require('axios');
-const app = express();
+const path = require('path');
 const cors = require('cors');
+const app = express();
 
-// Environment variables
+// -------------------------
+// CONFIG
+// -------------------------
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
+const daoPassword = "daopassword2026"; // password to authorize zone edits
 
-// DAO password for zone creation
-const daoPassword = "lizlacroixfeetpics";
-
-// Enable CORS for all origins (so GitHub Pages can fetch zones)
+// -------------------------
+// MIDDLEWARE
+// -------------------------
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '/'))); // serve static files from main branch
 
-// In-memory zone storage (replace with DB for persistence)
-let zones = [];
+// -------------------------
+// IN-MEMORY STORAGE
+// -------------------------
+let zones = []; // each zone: { id, name, points, color, info, mugshots, creator }
 
-// Health check
+// -------------------------
+// ROUTES
+// -------------------------
+
+// Home / map page
 app.get('/', (req, res) => {
-    res.send("GTAW OAuth backend running 👍");
+    // If ?username=... is present, serve the map page
+    const username = req.query.username;
+    if (username) {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    } else {
+        res.send("GTAW OAuth backend running 👍");
+    }
 });
 
 // OAuth callback
@@ -29,6 +46,7 @@ app.get('/auth/callback', async (req, res) => {
     if (!code) return res.send("No code provided");
 
     try {
+        // Exchange authorization code for access token
         const tokenRes = await axios.post(
             'https://ucp.gta.world/oauth/token',
             new URLSearchParams({
@@ -43,13 +61,14 @@ app.get('/auth/callback', async (req, res) => {
 
         const accessToken = tokenRes.data.access_token;
 
+        // Fetch user info
         const userRes = await axios.get('https://ucp.gta.world/api/user', {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
-        const userData = userRes.data;
-        const username = userData.user.username;
+        const username = userRes.data.user.username;
 
+        // Redirect back to map page with username query param
         res.redirect(`/?username=${encodeURIComponent(username)}`);
     } catch (err) {
         console.error(err.response?.data || err.message);
@@ -57,12 +76,14 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
-// GET /zones → return all zones
-app.get('/zones', (req, res) => {
-    res.json(zones);
-});
+// -------------------------
+// ZONES API
+// -------------------------
 
-// POST /zones → save a new zone
+// Get all zones (anyone can fetch)
+app.get('/zones', (req, res) => res.json(zones));
+
+// Save or update zone (requires DAO password)
 app.post('/zones', (req, res) => {
     const { name, points, color, info, mugshots, password, creator, id } = req.body;
 
@@ -79,23 +100,26 @@ app.post('/zones', (req, res) => {
         creator
     };
 
-    // If editing existing zone
     const index = zones.findIndex(z => z.id === zone.id);
-    if (index >= 0) zones[index] = zone;
-    else zones.push(zone);
+    if (index >= 0) zones[index] = zone; // update existing
+    else zones.push(zone); // new zone
 
     res.json(zone);
 });
 
-// DELETE /zones/:id → delete a zone
+// Delete zone (requires DAO password)
 app.delete('/zones/:id', (req, res) => {
     const { password } = req.body;
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
 
     const id = parseInt(req.params.id);
     zones = zones.filter(z => z.id !== id);
+
     res.json({ success: true });
 });
 
+// -------------------------
+// START SERVER
+// -------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
