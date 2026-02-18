@@ -14,7 +14,7 @@ let zones = [];
 
 // Middleware
 app.use(express.json()); // parse JSON bodies
-app.use(express.static(path.join(__dirname))); // serve index.html and other assets
+app.use(express.static(path.join(__dirname))); // serve index.html and assets
 
 // Health check
 app.get('/health', (req, res) => {
@@ -42,7 +42,6 @@ app.get('/auth/callback', async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    console.log("Token response:", tokenRes.data);
     const accessToken = tokenRes.data.access_token;
 
     // Fetch user info
@@ -51,7 +50,6 @@ app.get('/auth/callback', async (req, res) => {
     });
 
     const userData = userRes.data;
-    console.log("User data:", userData);
 
     // Redirect back to frontend with username
     res.redirect(`/?username=${encodeURIComponent(userData.user.username)}`);
@@ -66,26 +64,39 @@ app.get('/zones', (req, res) => {
   res.json(zones);
 });
 
-// Create new zone (requires correct password)
+// Create new zone (requires password)
 app.post('/zones', (req, res) => {
   const { name, points, creator, password, info, color, mugshots } = req.body;
   if (!name || !points || !creator || !password) return res.status(400).json({ error: "Missing required fields" });
-
-  // Password check
   if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
 
-  const zone = { id: Date.now(), name, points, creator, info: info || "", color: color || "#0000FF", mugshots: mugshots || [] };
+  const zone = {
+    id: Date.now(), // unique ID
+    name,
+    points,
+    creator,
+    info: info || "",
+    color: color || "#0000FF",
+    mugshots: Array.isArray(mugshots) ? mugshots : [] // array of { link, label }
+  };
+
   zones.push(zone);
   res.json(zone);
 });
 
-// Delete a zone (requires correct password)
+// Delete a zone (requires password)
 app.post('/zones/delete', (req, res) => {
   const { id, password } = req.body;
   if (!id || !password) return res.status(400).json({ error: "Missing required fields" });
   if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
 
+  const initialLength = zones.length;
   zones = zones.filter(z => z.id !== id);
+
+  if (zones.length === initialLength) {
+    return res.status(404).json({ error: "Zone not found" });
+  }
+
   res.json({ success: true });
 });
 
