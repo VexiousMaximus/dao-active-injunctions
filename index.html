@@ -10,14 +10,29 @@
     .leaflet-interactive:focus { outline:none; }
 
     /* Buttons */
-    #loginBtn, #createZoneBtn {
-      position:absolute; right:20px; padding:10px 20px; border:none; border-radius:5px;
+    #loginBtn, #createZoneBtn { position:absolute; right:20px; padding:10px 20px; border:none; border-radius:5px;
       font-weight:bold; font-size:14px; cursor:pointer; z-index:2000;
     }
     #loginBtn { top:20px; background:#ff4444; color:white; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
     #loginBtn:hover { background:#ff2222; }
     #createZoneBtn { top:60px; background:#2288ff; color:white; display:none; }
     #createZoneBtn:hover { background:#0066ff; }
+
+    /* Sidebar for zone creation/info */
+    #sidebar {
+      position: absolute;
+      top: 0; right: -300px;
+      width: 300px; height: 100%;
+      background:white; padding:10px;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+      transition: right 0.3s;
+      overflow-y: auto;
+      z-index: 2500;
+    }
+    #sidebar.show { right:0; }
+    #sidebar h2 { margin-top:0; }
+    #sidebar input, #sidebar textarea, #sidebar button { width: 100%; margin-bottom:8px; }
+    .mugshot { width:150px; height:150px; object-fit:cover; margin:5px; border:1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -25,6 +40,17 @@
 <div id="map"></div>
 <button id="loginBtn">Sign in with GTA World</button>
 <button id="createZoneBtn">Create New Zone</button>
+
+<div id="sidebar">
+  <h2 id="sidebarTitle">New Zone</h2>
+  <label>Name:</label><input type="text" id="zoneName"/>
+  <label>Color:</label><input type="color" id="zoneColor" value="#0000FF"/>
+  <label>Fill Opacity:</label><input type="number" id="zoneOpacity" min="0" max="1" step="0.1" value="0.4"/>
+  <label>Additional Info:</label><textarea id="zoneInfo"></textarea>
+  <label>Imgur Image URLs (comma separated):</label><textarea id="zoneImages"></textarea>
+  <button id="saveZoneBtn">Save Zone</button>
+  <button id="closeSidebarBtn">Close</button>
+</div>
 
 <script>
   // ===============================
@@ -73,52 +99,104 @@
   // ===============================
   // LOAD EXISTING ZONES
   // ===============================
-  fetch('/zones').then(res => res.json()).then(data => {
-    data.forEach(zone => {
-      L.polygon(zone.points, { color:"#0000FF", fillOpacity:0.4 })
-       .addTo(map)
-       .bindTooltip(`${zone.name}<br>created by: ${zone.createdBy}`, {direction:"center"});
+  const zonesLayerGroup = L.layerGroup().addTo(map);
+
+  function renderZones(zones) {
+    zonesLayerGroup.clearLayers();
+    zones.forEach(zone => {
+      const polygon = L.polygon(zone.points, {color: zone.color, fillOpacity: zone.fillOpacity})
+        .addTo(zonesLayerGroup)
+        .bindTooltip(zone.name, {direction:"center"});
+      
+      polygon.on('click', () => {
+        showZoneInfo(zone);
+      });
     });
-  });
+  }
+
+  fetch('/zones').then(res => res.json()).then(renderZones);
 
   // ===============================
-  // CREATE NEW ZONE
+  // SIDEBAR
   // ===============================
-  let drawingZone=false, tempPoints=[], tempPolygon=null;
+  const sidebar = document.getElementById('sidebar');
+  const saveBtn = document.getElementById('saveZoneBtn');
+  const closeBtn = document.getElementById('closeSidebarBtn');
 
-  const createBtn = document.getElementById('createZoneBtn');
-  createBtn.addEventListener('click', () => {
-    if (!username) return alert("You must be signed in to create zones");
+  let drawingZone = false;
+  let tempPoints = [];
+  let tempPolygon = null;
+
+  document.getElementById('createZoneBtn').addEventListener('click', () => {
+    if (!username) return alert("Sign in first!");
     const enteredPassword = prompt("Enter password to create a new zone:");
     if (enteredPassword !== "daopassword2026") return alert("Invalid password!");
+    drawingZone = true; tempPoints = []; tempPolygon = null;
+    sidebar.classList.add('show');
+    document.getElementById('sidebarTitle').textContent = "Create New Zone";
+    alert("Click points on the map for the zone. Fill info in sidebar and click Save.");
+  });
 
-    drawingZone = true; tempPoints=[]; alert("Click points for the zone. Press 'S' to save.");
+  closeBtn.addEventListener('click', () => {
+    sidebar.classList.remove('show');
+    drawingZone = false; tempPoints = [];
+    if(tempPolygon) map.removeLayer(tempPolygon);
   });
 
   map.on('click', e => {
     if (!drawingZone) return;
     tempPoints.push([e.latlng.lat, e.latlng.lng]);
     if(tempPolygon) map.removeLayer(tempPolygon);
-    tempPolygon = L.polygon(tempPoints, {color:"#0000FF", fillOpacity:0.4}).addTo(map);
+    tempPolygon = L.polygon(tempPoints, {color: document.getElementById('zoneColor').value, fillOpacity: parseFloat(document.getElementById('zoneOpacity').value)}).addTo(map);
   });
 
-  document.addEventListener('keydown', e => {
-    if (drawingZone && e.key.toLowerCase() === 's') {
-      const zoneName = prompt("Enter zone name:");
-      if (!zoneName) return alert("Zone must have a name!");
-      fetch('/zones', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:zoneName, points:tempPoints, username, password:"daopassword2026"})
-      }).then(res=>res.json()).then(data=>{
-        alert("Zone saved!");
-        drawingZone=false; tempPoints=[]; tempPolygon=null;
-        L.polygon(data.points, {color:"#0000FF", fillOpacity:0.4})
-          .addTo(map)
-          .bindTooltip(`${data.name}<br>created by: ${data.createdBy}`, {direction:"center"});
-      });
-    }
+  saveBtn.addEventListener('click', () => {
+    const name = document.getElementById('zoneName').value;
+    if (!name) return alert("Zone must have a name!");
+    const color = document.getElementById('zoneColor').value;
+    const fillOpacity = parseFloat(document.getElementById('zoneOpacity').value);
+    const info = document.getElementById('zoneInfo').value;
+    const images = document.getElementById('zoneImages').value.split(',').map(i=>i.trim()).filter(Boolean);
+
+    fetch('/zones', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name, points:tempPoints, username, password:"daopassword2026", color, fillOpacity, info, images})
+    }).then(res=>res.json()).then(data=>{
+      alert("Zone saved!");
+      drawingZone=false; tempPoints=[]; tempPolygon=null;
+      sidebar.classList.remove('show');
+      renderZones([...zonesLayerGroup.getLayers().map(l=>({points:l.getLatLngs()[0].map(p=>[p.lat,p.lng]), name:l.getTooltip().getContent(), color:l.options.color, fillOpacity:l.options.fillOpacity, createdBy: username, info:"", images:[]})) , data]);
+    });
   });
+
+  // ===============================
+  // SHOW ZONE INFO
+  // ===============================
+  function showZoneInfo(zone){
+    sidebar.classList.add('show');
+    document.getElementById('sidebarTitle').textContent = zone.name;
+    document.getElementById('zoneName').value = zone.name;
+    document.getElementById('zoneColor').value = zone.color;
+    document.getElementById('zoneOpacity').value = zone.fillOpacity;
+    document.getElementById('zoneInfo').value = zone.info;
+    document.getElementById('zoneImages').value = zone.images.join(', ');
+
+    // Show images
+    const imgContainer = document.createElement('div');
+    imgContainer.innerHTML = '';
+    zone.images.forEach(url=>{
+      const img = document.createElement('img');
+      img.src = url;
+      img.className='mugshot';
+      imgContainer.appendChild(img);
+    });
+
+    if(document.getElementById('zoneImagesContainer')) document.getElementById('zoneImagesContainer').remove();
+    imgContainer.id = 'zoneImagesContainer';
+    sidebar.appendChild(imgContainer);
+  }
+
 </script>
 
 </body>
