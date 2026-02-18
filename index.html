@@ -57,7 +57,6 @@
   // ===============================
   // MAP SETUP
   // ===============================
-
   var imageWidth = 3500;
   var imageHeight = 3500;
   var bounds = [[0, 0], [imageHeight, imageWidth]];
@@ -68,7 +67,7 @@
     maxZoom: 5,
     maxBounds: bounds,
     maxBoundsViscosity: 1.0,
-    zoomSnap: 0.5, // smoother zoom
+    zoomSnap: 0.5,
     zoomDelta: 0.5
   });
 
@@ -148,8 +147,8 @@
   // ===============================
   // GTA WORLD LOGIN BUTTON
   // ===============================
-  const clientId = "YOUR_CLIENT_ID"; // Replace with your GTA World client ID
-  const redirectUri = "https://your-render-domain.onrender.com/auth/callback"; // Replace with your Render URL
+  const clientId = "130"; // ✅ your real GTA World client ID
+  const redirectUri = "https://gtaw-backend.onrender.com/auth/callback"; // ✅ your Render backend callback
 
   document.getElementById('loginBtn').addEventListener('click', () => {
     const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
@@ -160,4 +159,3 @@
 
 </body>
 </html>
-
