@@ -1,95 +1,52 @@
 const express = require('express');
 const axios = require('axios');
-const path = require('path');
-const cors = require('cors');
-
 const app = express();
-
-// Enable CORS so GitHub Pages can fetch zones
+const cors = require('cors');
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
-const clientId = process.env.GTAW_CLIENT_ID;
-const clientSecret = process.env.GTAW_CLIENT_SECRET;
-const redirectUri = process.env.GTAW_REDIRECT_URI;
-
-// In-memory zones
 let zones = [];
+let nextId = 1;
+
+// ===============================
+// Routes
+// ===============================
 
 // Health check
-app.get('/health', (req, res) => res.send("GTAW OAuth backend running 👍"));
-
-// OAuth callback
-app.get('/auth/callback', async (req, res) => {
-  const code = req.query.code;
-  if (!code) return res.send("No code provided");
-
-  try {
-    const tokenRes = await axios.post(
-      'https://ucp.gta.world/oauth/token',
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code
-      }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-
-    const accessToken = tokenRes.data.access_token;
-
-    const userRes = await axios.get('https://ucp.gta.world/api/user', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    const userData = userRes.data;
-    res.redirect(`/?username=${encodeURIComponent(userData.user.username)}`);
-  } catch (err) {
-    console.error("OAuth error:", err.response?.data || err.message);
-    res.send("OAuth login failed");
-  }
+app.get('/', (req, res) => {
+  res.send('GTAW OAuth backend running 👍');
 });
 
-// Get zones
+// Get all zones
 app.get('/zones', (req, res) => {
   res.json(zones);
 });
 
-// Create zone
+// Add or update a zone
 app.post('/zones', (req, res) => {
-  const { name, points, creator, password, info, color, mugshots } = req.body;
-  if (!name || !points || !creator || !password) return res.status(400).json({ error: "Missing required fields" });
-  if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
+  const { id, name, points, color, opacity, info, mugshots, creator } = req.body;
+  if (!name || !points || !creator) return res.status(400).json({ error: 'Missing fields' });
 
-  const zone = {
-    id: Date.now(),
-    name,
-    points,
-    creator,
-    info: info || "",
-    color: color || "#0000FF",
-    mugshots: Array.isArray(mugshots) ? mugshots : []
-  };
-
-  zones.push(zone);
-  res.json(zone);
+  if (id) {
+    // update existing
+    const z = zones.find(z => z.id === id);
+    if (!z) return res.status(404).json({ error: 'Zone not found' });
+    Object.assign(z, { name, points, color, opacity, info, mugshots, creator });
+    res.json(z);
+  } else {
+    // create new
+    const newZone = { id: nextId++, name, points, color, opacity, info, mugshots, creator };
+    zones.push(newZone);
+    res.json(newZone);
+  }
 });
 
-// Delete zone
-app.post('/zones/delete', (req, res) => {
-  const { id, password } = req.body;
-  if (!id || !password) return res.status(400).json({ error: "Missing required fields" });
-  if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
-
-  const initialLength = zones.length;
-  zones = zones.filter(z => z.id !== Number(id));
-
-  if (zones.length === initialLength) {
-    return res.status(404).json({ error: "Zone not found" });
-  }
-
+// Delete a zone
+app.delete('/zones/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = zones.findIndex(z => z.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Zone not found' });
+  zones.splice(index, 1);
   res.json({ success: true });
 });
 
