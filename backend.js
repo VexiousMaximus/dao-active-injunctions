@@ -1,8 +1,8 @@
-// backend.js
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 const app = express();
 
 // -------------------------
@@ -11,19 +11,28 @@ const app = express();
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
-const daoPassword = "daopassword2026"; // password to authorize zone edits
+const daoPassword = "daopassword2026";
 
 // -------------------------
 // MIDDLEWARE
 // -------------------------
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '/'))); // serve static files from main branch
+app.use(express.static(path.join(__dirname, '/')));
 
 // -------------------------
-// IN-MEMORY STORAGE
+// PERSISTENT STORAGE
 // -------------------------
-let zones = []; // each zone: { id, name, points, color, info, mugshots, creator }
+const ZONES_FILE = path.join(__dirname, 'zones.json');
+let zones = [];
+
+if (fs.existsSync(ZONES_FILE)) {
+  zones = JSON.parse(fs.readFileSync(ZONES_FILE, 'utf8'));
+}
+
+function saveZonesToFile() {
+  fs.writeFileSync(ZONES_FILE, JSON.stringify(zones, null, 2));
+}
 
 // -------------------------
 // ROUTES
@@ -31,7 +40,6 @@ let zones = []; // each zone: { id, name, points, color, info, mugshots, creator
 
 // Home / map page
 app.get('/', (req, res) => {
-    // If ?username=... is present, serve the map page
     const username = req.query.username;
     if (username) {
         res.sendFile(path.join(__dirname, 'index.html'));
@@ -46,7 +54,6 @@ app.get('/auth/callback', async (req, res) => {
     if (!code) return res.send("No code provided");
 
     try {
-        // Exchange authorization code for access token
         const tokenRes = await axios.post(
             'https://ucp.gta.world/oauth/token',
             new URLSearchParams({
@@ -61,14 +68,12 @@ app.get('/auth/callback', async (req, res) => {
 
         const accessToken = tokenRes.data.access_token;
 
-        // Fetch user info
         const userRes = await axios.get('https://ucp.gta.world/api/user', {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
         const username = userRes.data.user.username;
 
-        // Redirect back to map page with username query param
         res.redirect(`/?username=${encodeURIComponent(username)}`);
     } catch (err) {
         console.error(err.response?.data || err.message);
@@ -80,13 +85,12 @@ app.get('/auth/callback', async (req, res) => {
 // ZONES API
 // -------------------------
 
-// Get all zones (anyone can fetch)
+// Get all zones
 app.get('/zones', (req, res) => res.json(zones));
 
-// Save or update zone (requires DAO password)
+// Save or update zone
 app.post('/zones', (req, res) => {
     const { name, points, color, info, mugshots, password, creator, id } = req.body;
-
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
     if (!name || !points) return res.status(400).json({ error: "Missing name or points" });
 
@@ -101,21 +105,36 @@ app.post('/zones', (req, res) => {
     };
 
     const index = zones.findIndex(z => z.id === zone.id);
-    if (index >= 0) zones[index] = zone; // update existing
-    else zones.push(zone); // new zone
+    if (index >= 0) zones[index] = zone;
+    else zones.push(zone);
 
+    saveZonesToFile();
     res.json(zone);
 });
 
-// Delete zone (requires DAO password)
+// Delete zone by ID
 app.delete('/zones/:id', (req, res) => {
     const { password } = req.body;
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
 
     const id = parseInt(req.params.id);
     zones = zones.filter(z => z.id !== id);
-
+    saveZonesToFile();
     res.json({ success: true });
+});
+
+// Delete zone by NAME
+app.post('/zones/deleteByName', (req, res) => {
+    const { password, name } = req.body;
+    if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
+    if (!name) return res.status(400).json({ error: "Zone name required" });
+
+    const index = zones.findIndex(z => z.name.toLowerCase() === name.toLowerCase());
+    if (index === -1) return res.status(404).json({ error: "Zone not found" });
+
+    const deletedZone = zones.splice(index, 1)[0];
+    saveZonesToFile();
+    res.json({ success: true, deletedZone });
 });
 
 // -------------------------
