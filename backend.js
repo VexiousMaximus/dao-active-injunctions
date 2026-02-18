@@ -1,117 +1,94 @@
-// backend.js
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
-const cors = require('cors');
+
 const app = express();
 
-// -------------------------
-// CONFIG
-// -------------------------
+// ✅ Environment variables
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
-const daoPassword = "daopassword2026"; // password to authorize zone edits
 
-// -------------------------
-// MIDDLEWARE
-// -------------------------
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '/'))); // serve static files from main branch
+// In-memory zone storage
+let zones = [];
 
-// -------------------------
-// IN-MEMORY STORAGE
-// -------------------------
-let zones = []; // each zone: { id, name, points, color, info, mugshots, creator }
+// Middleware
+app.use(express.json()); // parse JSON bodies
+app.use(express.static(path.join(__dirname))); // serve index.html and other assets
 
-// -------------------------
-// ROUTES
-// -------------------------
-
-// Home / map page
-app.get('/', (req, res) => {
-    const username = req.query.username;
-    if (username) res.sendFile(path.join(__dirname, 'index.html'));
-    else res.send("GTAW OAuth backend running 👍");
+// Health check
+app.get('/health', (req, res) => {
+  res.send("GTAW OAuth backend running 👍");
 });
 
 // OAuth callback
 app.get('/auth/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.send("No code provided");
+  const code = req.query.code;
+  if (!code) return res.send("No code provided");
 
-    try {
-        const tokenRes = await axios.post(
-            'https://ucp.gta.world/oauth/token',
-            new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                code
-            }),
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
+  console.log("Received OAuth code:", code);
 
-        const accessToken = tokenRes.data.access_token;
+  try {
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://ucp.gta.world/oauth/token',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code: code
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
 
-        const userRes = await axios.get('https://ucp.gta.world/api/user', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
+    console.log("Token response:", tokenRes.data);
+    const accessToken = tokenRes.data.access_token;
 
-        const username = userRes.data.user.username;
+    // Fetch user info
+    const userRes = await axios.get('https://ucp.gta.world/api/user', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
 
-        res.redirect(`/?username=${encodeURIComponent(username)}`);
-    } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.send("OAuth login failed");
-    }
+    const userData = userRes.data;
+    console.log("User data:", userData);
+
+    // Redirect back to frontend with username
+    res.redirect(`/?username=${encodeURIComponent(userData.user.username)}`);
+  } catch (err) {
+    console.error("OAuth error:", err.response?.data || err.message);
+    res.send("OAuth login failed. Please try again.");
+  }
 });
-
-// -------------------------
-// ZONES API
-// -------------------------
 
 // Get all zones
-app.get('/zones', (req, res) => res.json(zones));
+app.get('/zones', (req, res) => {
+  res.json(zones);
+});
 
-// Save or update zone
+// Create new zone (requires correct password)
 app.post('/zones', (req, res) => {
-    const { name, points, color, info, mugshots, password, creator, id } = req.body;
-    if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
-    if (!name || !points) return res.status(400).json({ error: "Missing name or points" });
+  const { name, points, creator, password, info, color, mugshots } = req.body;
+  if (!name || !points || !creator || !password) return res.status(400).json({ error: "Missing required fields" });
 
-    const zone = {
-        id: id || Date.now(),
-        name,
-        points,
-        color: color || "#0000FF",
-        info: info || "",
-        mugshots: mugshots || [],
-        creator
-    };
+  // Password check
+  if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
 
-    const index = zones.findIndex(z => z.id === zone.id);
-    if (index >= 0) zones[index] = zone; // update
-    else zones.push(zone); // new
-
-    res.json(zone);
+  const zone = { id: Date.now(), name, points, creator, info: info || "", color: color || "#0000FF", mugshots: mugshots || [] };
+  zones.push(zone);
+  res.json(zone);
 });
 
-// Delete a zone
-app.delete('/zones/:id', (req, res) => {
-    const { password } = req.body;
-    if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
+// Delete a zone (requires correct password)
+app.post('/zones/delete', (req, res) => {
+  const { id, password } = req.body;
+  if (!id || !password) return res.status(400).json({ error: "Missing required fields" });
+  if (password !== "daopassword2026") return res.status(401).json({ error: "Invalid password" });
 
-    const id = parseInt(req.params.id);
-    zones = zones.filter(z => z.id !== id);
-
-    res.json({ success: true });
+  zones = zones.filter(z => z.id !== id);
+  res.json({ success: true });
 });
 
-// -------------------------
-// START SERVER
-// -------------------------
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
