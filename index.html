@@ -60,29 +60,29 @@
 </div>
 
 <script>
-  // MAP SETUP
-  const bounds=[[0,0],[3500,3500]];
-  const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:5,maxBounds:bounds,maxBoundsViscosity:1,zoomSnap:0.5,zoomDelta:0.5});
-  L.imageOverlay('lsmap.jpeg',bounds).addTo(map);
-  map.fitBounds(bounds); map.setZoom(1);
+  const mapBounds=[[0,0],[3500,3500]];
+  const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:5,maxBounds:mapBounds,maxBoundsViscosity:1,zoomSnap:0.5,zoomDelta:0.5});
+  L.imageOverlay('lsmap.jpeg',mapBounds).addTo(map); map.fitBounds(mapBounds); map.setZoom(1);
 
-  map.on('click', e=>{if(e.originalEvent.ctrlKey) L.popup().setLatLng(e.latlng).setContent(`[${Math.round(e.latlng.lat)},${Math.round(e.latlng.lng)}]`).openOn(map);});
+  const loginBtn=document.getElementById('loginBtn');
+  const createBtn=document.getElementById('createZoneBtn');
+  let authorized=false, zones=[], currentZone=null, tempPoints=[], drawing=false;
 
-  // AUTH
+  // OAuth redirect
   const clientId="130";
   const redirectUri="https://dao-active-injunctions.onrender.com/auth/callback";
-  const loginBtn=document.getElementById('loginBtn');
-  loginBtn.addEventListener('click', ()=>{window.location.href=`https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;});
-
-  let authorized=false;
   const params=new URLSearchParams(window.location.search);
   const username=params.get('username');
-  if(username){loginBtn.style.display='none'; document.getElementById('createZoneBtn').style.display='block';}
+  if(username){loginBtn.style.display='none'; createBtn.style.display='block';}
 
-  // ZONES
-  let zones=[], currentZone=null, tempPoints=[], drawing=false;
+  loginBtn.addEventListener('click', ()=>{window.location.href=`https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;});
 
-  const createBtn=document.getElementById('createZoneBtn');
+  // Fetch zones
+  fetch('https://dao-active-injunctions.onrender.com/zones').then(r=>r.json()).then(data=>{zones=data; zones.forEach(addZoneToMap);});
+
+  function toggleSidebar(id, show){document.getElementById(id).style.transform=show?'translateX(0)':id==='editSidebar'?'translateX(100%)':'translateX(-100%)';}
+
+  // CREATE ZONE
   createBtn.addEventListener('click', ()=>{
     if(!authorized){
       const pass=prompt("Enter DAO password:");
@@ -92,26 +92,11 @@
     currentZone=null; drawing=true; tempPoints=[]; toggleSidebar('editSidebar', true);
   });
 
-  function toggleSidebar(id, show){document.getElementById(id).style.transform=show?'translateX(0)':id==='editSidebar'?'translateX(100%)':'translateX(-100%)';}
+  map.on('click', e=>{
+    if(drawing){tempPoints.push([e.latlng.lat,e.latlng.lng]);}
+  });
 
-  function addZoneToMap(zone){
-    const poly=L.polygon(zone.points,{color:zone.color||'#0000ff', fillOpacity:zone.opacity||0.4}).addTo(map).bindTooltip(zone.name,{direction:'center'});
-    poly.zoneData=zone;
-    poly.on('click', ()=>{
-      document.getElementById('infoName').innerText=zone.name;
-      document.getElementById('infoCreator').innerText='Created by: '+(zone.creator||'Unknown');
-      document.getElementById('infoAdditional').innerText=zone.info||'';
-      const mugDiv=document.getElementById('infoMugshots'); mugDiv.innerHTML='';
-      if(zone.mugshots) zone.mugshots.forEach(m=>{const img=document.createElement('img'); img.src=m.url; img.width=150; img.height=150; img.style.margin='5px'; const label=document.createElement('p'); label.innerText=m.label||''; mugDiv.appendChild(img); mugDiv.appendChild(label);});
-      toggleSidebar('infoSidebar', true);
-
-      if(authorized){currentZone=zone; populateEditSidebar(zone); toggleSidebar('editSidebar', true);}
-    });
-  }
-
-  fetch('https://dao-active-injunctions.onrender.com/zones').then(r=>r.json()).then(data=>{zones=data; zones.forEach(addZoneToMap);});
-
-  // EDIT SIDEBAR
+  // ADD/EDIT ZONE LOGIC
   const zoneNameInput=document.getElementById('zoneName');
   const zoneColorInput=document.getElementById('zoneColor');
   const zoneOpacityInput=document.getElementById('zoneOpacity');
@@ -120,6 +105,8 @@
   const deleteBtn=document.getElementById('deleteZoneBtn');
   const mugshotContainer=document.getElementById('mugshotContainer');
   const addMugshotBtn=document.getElementById('addMugshotBtn');
+
+  addMugshotBtn.addEventListener('click', ()=>{const div=document.createElement('div'); div.innerHTML=`<input type="text" placeholder="Imgur URL"><input type="text" placeholder="Label">`; mugshotContainer.appendChild(div);});
 
   function populateEditSidebar(zone){
     zoneNameInput.value=zone.name;
@@ -130,18 +117,14 @@
     if(zone.mugshots) zone.mugshots.forEach((m,i)=>{const div=document.createElement('div'); div.innerHTML=`<input type="text" placeholder="Imgur URL" value="${m.url}" data-index="${i}"><input type="text" placeholder="Label" value="${m.label}" data-index="${i}">`; mugshotContainer.appendChild(div);});
   }
 
-  addMugshotBtn.addEventListener('click', ()=>{
-    const div=document.createElement('div'); div.innerHTML=`<input type="text" placeholder="Imgur URL"><input type="text" placeholder="Label">`; mugshotContainer.appendChild(div);
-  });
-
   function gatherZoneData(){
     const mugshots=Array.from(mugshotContainer.children).map(div=>{const inputs=div.getElementsByTagName('input'); return {url:inputs[0].value,label:inputs[1].value};});
-    return {id:currentZone?currentZone.id:null, name:zoneNameInput.value, color:zoneColorInput.value, opacity:parseFloat(zoneOpacityInput.value), info:zoneInfoInput.value, mugshots, creator:username, points:currentZone?currentZone.points:tempPoints};
+    return {id:currentZone?currentZone.id:null,name:zoneNameInput.value,color:zoneColorInput.value,opacity:parseFloat(zoneOpacityInput.value),info:zoneInfoInput.value,mugshots,creator:username,points:currentZone?currentZone.points:tempPoints};
   }
 
   saveBtn.addEventListener('click', ()=>{
     const data=gatherZoneData();
-    fetch('https://dao-active-injunctions.onrender.com/zones',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}).then(r=>r.json()).then(z=>{
+    fetch('https://dao-active-injunctions.onrender.com/zones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()).then(z=>{
       if(!currentZone) addZoneToMap(z);
       currentZone=z; tempPoints=[]; drawing=false; alert('Zone saved!');
     }).catch(()=>alert('Error saving zone'));
@@ -151,6 +134,21 @@
     if(!currentZone){alert('No zone selected'); return;}
     fetch(`https://dao-active-injunctions.onrender.com/zones/${currentZone.id}`,{method:'DELETE'}).then(r=>r.json()).then(()=>{location.reload();}).catch(()=>alert('Error deleting zone'));
   });
+
+  // ADD ZONE TO MAP
+  function addZoneToMap(zone){
+    const poly=L.polygon(zone.points,{color:zone.color||'#0000ff', fillOpacity:zone.opacity||0.4}).addTo(map).bindTooltip(zone.name,{direction:'center'});
+    poly.zoneData=zone;
+    poly.on('click', ()=>{
+      document.getElementById('infoName').innerText=zone.name;
+      document.getElementById('infoCreator').innerText='Created by: '+(zone.creator||'Unknown');
+      document.getElementById('infoAdditional').innerText=zone.info||'';
+      const mugDiv=document.getElementById('infoMugshots'); mugDiv.innerHTML='';
+      if(zone.mugshots) zone.mugshots.forEach(m=>{const img=document.createElement('img'); img.src=m.url; img.width=150; img.height=150; img.style.margin='5px'; const label=document.createElement('p'); label.innerText=m.label||''; mugDiv.appendChild(img); mugDiv.appendChild(label);});
+      toggleSidebar('infoSidebar', true);
+      if(authorized){currentZone=zone; populateEditSidebar(zone); toggleSidebar('editSidebar', true);}
+    });
+  }
 
 </script>
 </body>
