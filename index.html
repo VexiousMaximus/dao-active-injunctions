@@ -108,10 +108,14 @@ document.getElementById('createZoneBtn').onclick=()=>{
     daoAuthenticated=true;
   }
 
+  // Create empty zone immediately
   editingZone={id:Date.now(),points:[],creator:username,color:"#0000FF",info:"",mugshots:[],name:""};
   newZonePoints=[];
-
+  
+  // Show sidebar immediately
   showCreateSidebar(editingZone);
+
+  // Start listening for map clicks
   map.on('click', addPointForNewZone);
 };
 
@@ -153,14 +157,12 @@ function showCreateSidebar(zone){
   zone.mugshots.forEach(m=>addMugshotInput(m.url,m.label));
   document.getElementById('addMugshotBtn').onclick=()=>addMugshotInput();
 
-  // Undo last point
   document.getElementById('undoPointBtn').onclick=()=>{
     if(newZonePoints.length>0) newZonePoints.pop();
     updateTempPolygon();
     editingZone.points = newZonePoints;
   };
 
-  // Cancel zone creation
   document.getElementById('cancelZoneBtn').onclick=()=>closeSidebar('create');
 
   document.getElementById('zoneName').oninput=e=>{zone.name=e.target.value; updateTempPolygon();}
@@ -253,8 +255,12 @@ async function loadZones(){
         .bindTooltip(zone.name,{direction:"center"})
         .on('click',()=>{
           showInfoSidebar(zone);
-          if(daoAuthenticated) editingZone = {...zone};
-          showCreateSidebar(editingZone);
+          if(daoAuthenticated){
+            editingZone = {...zone};
+            showCreateSidebar(editingZone);
+            newZonePoints = [...zone.points];
+            tempPolygon=L.polygon(newZonePoints,{color:editingZone.color,fillOpacity:0.4}).addTo(map);
+          }
         });
       polygonLayers.set(zone.id, poly);
     });
