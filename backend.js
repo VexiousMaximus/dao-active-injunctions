@@ -2,7 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
-const fs = require('fs');
 const app = express();
 
 // -------------------------
@@ -13,6 +12,12 @@ const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
 const daoPassword = "Goomburrito";
 
+// GitHub storage config
+const GH_TOKEN = process.env.GITHUB_TOKEN;
+const GH_OWNER = process.env.GITHUB_OWNER;
+const GH_REPO = process.env.GITHUB_REPO;
+const GH_FILE = "zones.json";
+
 // -------------------------
 // MIDDLEWARE
 // -------------------------
@@ -21,18 +26,43 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
 // -------------------------
-// PERSISTENT STORAGE
+// PERSISTENT STORAGE (GitHub)
 // -------------------------
-const ZONES_FILE = path.join(__dirname, 'zones.json');
 let zones = [];
+let sha = null;
 
-if (fs.existsSync(ZONES_FILE)) {
-  zones = JSON.parse(fs.readFileSync(ZONES_FILE, 'utf8'));
+async function loadZonesFromGitHub() {
+  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+
+  const res = await axios.get(url, {
+    headers: { Authorization: `Bearer ${GH_TOKEN}` }
+  });
+
+  sha = res.data.sha;
+  const content = Buffer.from(res.data.content, "base64").toString("utf8");
+  zones = JSON.parse(content);
 }
 
-function saveZonesToFile() {
-  fs.writeFileSync(ZONES_FILE, JSON.stringify(zones, null, 2));
+async function saveZonesToGitHub() {
+  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+
+  const content = Buffer.from(JSON.stringify(zones, null, 2)).toString("base64");
+
+  const body = {
+    message: "Update zones",
+    content,
+    sha
+  };
+
+  const res = await axios.put(url, body, {
+    headers: { Authorization: `Bearer ${GH_TOKEN}` }
+  });
+
+  sha = res.data.content.sha;
 }
+
+// load zones at startup
+loadZonesFromGitHub().catch(console.error);
 
 // -------------------------
 // ROUTES
@@ -89,7 +119,7 @@ app.get('/auth/callback', async (req, res) => {
 app.get('/zones', (req, res) => res.json(zones));
 
 // Save or update zone
-app.post('/zones', (req, res) => {
+app.post('/zones', async (req, res) => {
     const { name, points, color, info, mugshots, password, creator, id } = req.body;
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
     if (!name || !points) return res.status(400).json({ error: "Missing name or points" });
@@ -108,23 +138,24 @@ app.post('/zones', (req, res) => {
     if (index >= 0) zones[index] = zone;
     else zones.push(zone);
 
-    saveZonesToFile();
+    await saveZonesToGitHub();
     res.json(zone);
 });
 
 // Delete zone by ID
-app.delete('/zones/:id', (req, res) => {
+app.delete('/zones/:id', async (req, res) => {
     const { password } = req.body;
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
 
     const id = parseInt(req.params.id);
     zones = zones.filter(z => z.id !== id);
-    saveZonesToFile();
+
+    await saveZonesToGitHub();
     res.json({ success: true });
 });
 
 // Delete zone by NAME
-app.post('/zones/deleteByName', (req, res) => {
+app.post('/zones/deleteByName', async (req, res) => {
     const { password, name } = req.body;
     if (password !== daoPassword) return res.status(403).json({ error: "Invalid password" });
     if (!name) return res.status(400).json({ error: "Zone name required" });
@@ -133,7 +164,8 @@ app.post('/zones/deleteByName', (req, res) => {
     if (index === -1) return res.status(404).json({ error: "Zone not found" });
 
     const deletedZone = zones.splice(index, 1)[0];
-    saveZonesToFile();
+
+    await saveZonesToGitHub();
     res.json({ success: true, deletedZone });
 });
 
