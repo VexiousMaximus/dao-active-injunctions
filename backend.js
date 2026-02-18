@@ -1,38 +1,34 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
+const path = require('path');
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// ===============================
-// GTAW OAuth
-// ===============================
+// ✅ Environment variables
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
 
-// ===============================
-// In-memory storage
-// ===============================
+// In-memory zones storage (replace with DB if needed)
 let zones = [];
-let nextId = 1;
 
-// ===============================
-// Routes
-// ===============================
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname)));
 
-// Health check
+// Health check / serve frontend
 app.get('/', (req, res) => {
-  res.send('GTAW OAuth backend running 👍');
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// ===============================
 // OAuth callback
+// ===============================
 app.get('/auth/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send('No code provided');
 
   try {
+    // Exchange authorization code for access token
     const tokenRes = await axios.post(
       'https://ucp.gta.world/oauth/token',
       new URLSearchParams({
@@ -52,47 +48,58 @@ app.get('/auth/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    const userData = userRes.data;
+    const username = userRes.data.user.username;
 
     // Redirect back to frontend with username
-    res.redirect(`/?username=${encodeURIComponent(userData.user.username)}`);
+    res.redirect(`/?username=${encodeURIComponent(username)}`);
   } catch (err) {
     console.error(err.response?.data || err.message);
     res.send('OAuth login failed');
   }
 });
 
-// Get all zones
+// ===============================
+// Zone CRUD endpoints
+// ===============================
 app.get('/zones', (req, res) => {
   res.json(zones);
 });
 
-// Create/update a zone
 app.post('/zones', (req, res) => {
-  const { id, name, points, color, opacity, info, mugshots, creator } = req.body;
-  if (!name || !points || !creator) return res.status(400).json({ error: 'Missing fields' });
+  const { name, points, creator, mugshots, color, additionalInfo } = req.body;
+  if (!name || !points || !creator) return res.status(400).json({ error: 'Missing required fields' });
 
-  if (id) {
-    const z = zones.find(z => z.id === id);
-    if (!z) return res.status(404).json({ error: 'Zone not found' });
-    Object.assign(z, { name, points, color, opacity, info, mugshots, creator });
-    res.json(z);
-  } else {
-    const newZone = { id: nextId++, name, points, color, opacity, info, mugshots, creator };
-    zones.push(newZone);
-    res.json(newZone);
-  }
+  const zone = { id: Date.now(), name, points, creator, mugshots: mugshots || [], color: color || '#0000FF', additionalInfo: additionalInfo || '' };
+  zones.push(zone);
+  res.json(zone);
 });
 
-// Delete a zone
+app.put('/zones/:id', (req, res) => {
+  const { id } = req.params;
+  const zone = zones.find(z => z.id == id);
+  if (!zone) return res.status(404).json({ error: 'Zone not found' });
+
+  const { name, points, mugshots, color, additionalInfo } = req.body;
+  if (name) zone.name = name;
+  if (points) zone.points = points;
+  if (mugshots) zone.mugshots = mugshots;
+  if (color) zone.color = color;
+  if (additionalInfo) zone.additionalInfo = additionalInfo;
+
+  res.json(zone);
+});
+
 app.delete('/zones/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = zones.findIndex(z => z.id === id);
+  const { id } = req.params;
+  const index = zones.findIndex(z => z.id == id);
   if (index === -1) return res.status(404).json({ error: 'Zone not found' });
+
   zones.splice(index, 1);
   res.json({ success: true });
 });
 
+// ===============================
+// Start server
 // ===============================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
