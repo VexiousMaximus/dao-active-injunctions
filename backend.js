@@ -3,7 +3,7 @@ const axios = require('axios');
 const path = require('path');
 const app = express();
 
-// ✅ Environment variables for GTAW OAuth
+// Environment variables for GTAW OAuth
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
@@ -11,12 +11,9 @@ const redirectUri = process.env.GTAW_REDIRECT_URI;
 // In-memory storage for zones
 let zones = [];
 
-// Serve static files (index.html, map image, etc.)
+// Serve static files from repo root
 app.use(express.static(__dirname));
-app.use(express.json()); // parse JSON bodies
-
-// Health check
-app.get('/health', (req, res) => res.send("Backend running 👍"));
+app.use(express.json());
 
 // OAuth callback
 app.get('/auth/callback', async (req, res) => {
@@ -52,27 +49,25 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
-// Get saved zones
+// Get all zones
 app.get('/zones', (req, res) => {
     res.json(zones);
 });
 
 // Save new zone
 app.post('/zones', (req, res) => {
-    const { name, points, username, password } = req.body;
-    if (!name || !points || !username || !password) return res.status(400).json({ error: "Missing data" });
+    const { name, points, username, password, color, fillOpacity, info, images } = req.body;
+    if (!name || !points || !username || !password) return res.status(400).json({ error: "Missing required fields" });
 
-    if (password !== "daopassword2026") {
-        return res.status(403).json({ error: "Invalid password" });
-    }
+    if (password !== "daopassword2026") return res.status(403).json({ error: "Invalid password" });
 
-    const zone = { name, points, createdBy: username };
+    const zone = { name, points, createdBy: username, color: color || "#0000FF", fillOpacity: fillOpacity || 0.4, info: info || "", images: images || [] };
     zones.push(zone);
 
     res.json(zone);
 });
 
-// Serve index.html for root
+// Serve index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
