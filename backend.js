@@ -11,7 +11,7 @@ const app = express();
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
-const daoPassword = "daopassword2026";
+const daoPassword = "Goomburrito";
 
 // -------------------------
 // MIDDLEWARE
