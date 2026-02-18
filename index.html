@@ -198,4 +198,12 @@ body:JSON.stringify(zone)
 zones.push(z);
 renderZones();
 drawing=false;
-editorSidebar.classList.remove('show'
+editorSidebar.classList.remove('show');
+if(tempPoly)map.removeLayer(tempPoly);
+});
+};
+
+fetchZones();
+</script>
+</body>
+</html>
