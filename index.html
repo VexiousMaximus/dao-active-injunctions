@@ -36,7 +36,7 @@
     crs: L.CRS.Simple, minZoom:0, maxZoom:5, maxBounds:bounds,
     maxBoundsViscosity:1, zoomSnap:0.5, zoomDelta:0.5
   });
-  L.imageOverlay('lsmap.jpeg', bounds).addTo(map);
+  L.imageOverlay('./lsmap.jpeg', bounds).addTo(map);
   map.fitBounds(bounds); map.setZoom(1);
 
   // CTRL+CLICK coordinates popup
@@ -51,9 +51,8 @@
   // ===============================
   // AUTH LOGIN
   // ===============================
-  const clientId = "130"; // GTAW client ID
+  const clientId = "130"; 
   const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback";
-
   document.getElementById('loginBtn').addEventListener('click', () => {
     const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
     window.location.href = authUrl;
@@ -66,11 +65,10 @@
   const username = params.get('username');
   const faction = params.get('faction');
 
-  if (username && faction) {
-    console.log(`Logged in as ${username} in faction ${faction}`);
+  if (username) {
+    console.log(`Logged in as ${username}, faction: ${faction}`);
     document.getElementById('loginBtn').style.display = 'none';
 
-    // Only DAO can create zones
     if (faction === "District Attorney's Office") {
       document.getElementById('createZoneBtn').style.display = 'block';
     }
@@ -119,7 +117,6 @@
       });
     }
   });
-
 </script>
 
 </body>
