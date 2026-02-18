@@ -2,8 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-const clientId = "YOUR_CLIENT_ID";       // Replace with your GTA World OAuth client ID
-const clientSecret = "YOUR_CLIENT_SECRET"; // Replace with your GTA World OAuth client secret
+const clientId = "130";       // Replace with your GTA World OAuth client ID
+const clientSecret = "46L1fIKfWmZI98uDaBzjTEGpT8P4PM9VHTYXexbl"; // Replace with your GTA World OAuth client secret
 const redirectUri = "https://your-render-domain.onrender.com/auth/callback"; // Render URL
 
 // Serve static files (optional if you also host frontend here)
