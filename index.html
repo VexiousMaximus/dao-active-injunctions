@@ -144,19 +144,21 @@
     { direction: "center" }
   );
 
+
   // ===============================
   // GTA WORLD LOGIN BUTTON
   // ===============================
-  const clientId = "130"; // ✅ your real GTA World client ID
-  const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback"; // ✅ your Render backend callback
+const clientId = "130"; // your GTAW client ID
+const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback";
 
-  document.getElementById('loginBtn').addEventListener('click', () => {
+document.getElementById('loginBtn').addEventListener('click', () => {
     const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
     window.location.href = authUrl;
-  });
+});
 
 </script>
 
 </body>
 </html>
+
 
