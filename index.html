@@ -1,133 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>DAO Active Injunctions</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<title>DAO Active Injunctions</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <style>
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Segoe UI, Arial; }
-    #map { height:100vh; width:100vw; background:#c9f7f7; }
+<style>
+html,body{margin:0;height:100%;overflow:hidden;font-family:Segoe UI}
+#map{height:100vh;width:100vw;background:#c9f7f7}
 
-    /* Buttons */
-    #loginBtn, #createZoneBtn {
-      position:absolute; right:20px; padding:10px 18px;
-      border:none; border-radius:6px;
-      font-weight:600; font-size:14px;
-      cursor:pointer; z-index:2000;
-      box-shadow:0 3px 8px rgba(0,0,0,0.25);
-    }
-    #loginBtn { top:20px; background:#e53935; color:white; }
-    #loginBtn:hover { background:#c62828; }
-    #createZoneBtn { top:60px; background:#1976d2; color:white; display:none; }
-    #createZoneBtn:hover { background:#0d47a1; }
+#loginBtn,#createZoneBtn{
+position:absolute;right:20px;padding:10px 16px;
+border:none;border-radius:6px;font-weight:600;
+cursor:pointer;z-index:2000;
+box-shadow:0 3px 8px rgba(0,0,0,.25)
+}
+#loginBtn{top:20px;background:#e53935;color:#fff}
+#createZoneBtn{top:60px;background:#1976d2;color:#fff;display:none}
 
-    /* SIDEBAR BASE */
-    .sidebar {
-      position:absolute;
-      top:0;
-      right:-340px;
-      width:340px;
-      height:100%;
-      background:#ffffff;
-      box-shadow:-4px 0 18px rgba(0,0,0,0.25);
-      transition:right 0.3s ease;
-      z-index:3000;
-      display:flex;
-      flex-direction:column;
-    }
-    .sidebar.show { right:0; }
+.sidebar{
+position:absolute;top:0;right:-350px;width:350px;height:100%;
+background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.25);
+transition:right .3s ease;z-index:3000;display:flex;flex-direction:column
+}
+.sidebar.show{right:0}
+.sidebar-header{
+padding:18px;font-size:18px;font-weight:600;
+border-bottom:1px solid #e0e0e0;background:#f7f9fc
+}
+.sidebar-content{padding:16px;overflow-y:auto;flex:1}
+.closeBtn{
+position:absolute;top:10px;right:12px;
+border:none;background:none;font-size:20px;cursor:pointer
+}
+.label{font-size:12px;color:#777;margin-top:12px}
+.input,textarea{
+width:100%;padding:8px;border-radius:5px;
+border:1px solid #ccc;font-size:14px
+}
+textarea{min-height:60px}
+.saveBtn{
+margin-top:14px;background:#1976d2;color:#fff;
+border:none;padding:10px;border-radius:5px;font-weight:600;cursor:pointer
+}
 
-    .sidebar-header {
-      padding:18px 20px;
-      border-bottom:1px solid #e0e0e0;
-      font-size:18px;
-      font-weight:600;
-      background:#f7f9fc;
-    }
-
-    .sidebar-content {
-      padding:16px 18px;
-      overflow-y:auto;
-      flex:1;
-    }
-
-    .label {
-      font-size:12px;
-      color:#777;
-      margin-bottom:4px;
-      margin-top:12px;
-    }
-
-    .input, textarea {
-      width:100%;
-      padding:8px;
-      border-radius:5px;
-      border:1px solid #ccc;
-      font-size:14px;
-      box-sizing:border-box;
-    }
-
-    textarea { resize:vertical; min-height:60px; }
-
-    .saveBtn {
-      margin-top:14px;
-      background:#1976d2;
-      color:white;
-      border:none;
-      padding:10px;
-      border-radius:5px;
-      font-weight:600;
-      cursor:pointer;
-    }
-    .saveBtn:hover { background:#0d47a1; }
-
-    /* Viewer styles */
-    .zone-title {
-      font-size:20px;
-      font-weight:700;
-      margin-bottom:4px;
-    }
-
-    .zone-meta {
-      font-size:13px;
-      color:#777;
-      margin-bottom:12px;
-    }
-
-    .zone-info {
-      font-size:14px;
-      line-height:1.5;
-      margin-bottom:14px;
-    }
-
-    .mugshot-grid {
-      display:grid;
-      grid-template-columns:repeat(2, 1fr);
-      gap:8px;
-    }
-
-    .mugshot-grid img {
-      width:100%;
-      height:150px;
-      object-fit:cover;
-      border-radius:6px;
-      border:1px solid #ddd;
-    }
-
-    .closeBtn {
-      position:absolute;
-      top:12px;
-      right:12px;
-      background:none;
-      border:none;
-      font-size:18px;
-      cursor:pointer;
-      color:#777;
-    }
-    .closeBtn:hover { color:#000; }
-
-  </style>
+.zone-title{font-size:20px;font-weight:700}
+.zone-meta{font-size:13px;color:#777;margin-bottom:12px}
+.zone-info{font-size:14px;margin-bottom:14px}
+.mugshot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mugshot-grid img{
+width:100%;height:150px;object-fit:cover;
+border-radius:6px;border:1px solid #ddd
+}
+</style>
 </head>
 <body>
 
@@ -135,160 +60,142 @@
 <button id="loginBtn">Sign in with GTA World</button>
 <button id="createZoneBtn">Create New Zone</button>
 
-<!-- EDITOR SIDEBAR -->
 <div id="editorSidebar" class="sidebar">
-  <div class="sidebar-header">Create Injunction Zone</div>
-  <button class="closeBtn" onclick="closeEditor()">×</button>
+<div class="sidebar-header">Create Injunction Zone</div>
+<button class="closeBtn" onclick="editorSidebar.classList.remove('show')">×</button>
+<div class="sidebar-content">
+<div class="label">Zone Name</div>
+<input id="zoneName" class="input">
 
-  <div class="sidebar-content">
-    <div class="label">Zone Name</div>
-    <input id="zoneName" class="input"/>
+<div class="label">Color</div>
+<input id="zoneColor" type="color" class="input" value="#0000FF">
 
-    <div class="label">Color</div>
-    <input id="zoneColor" type="color" class="input" value="#0000FF"/>
+<div class="label">Fill Opacity</div>
+<input id="zoneOpacity" type="number" step="0.1" min="0" max="1" value="0.4" class="input">
 
-    <div class="label">Fill Opacity</div>
-    <input id="zoneOpacity" type="number" step="0.1" min="0" max="1" value="0.4" class="input"/>
+<div class="label">Additional Info</div>
+<textarea id="zoneInfo"></textarea>
 
-    <div class="label">Additional Information</div>
-    <textarea id="zoneInfo"></textarea>
+<div class="label">Mugshot URLs (comma separated)</div>
+<textarea id="zoneImages"></textarea>
 
-    <div class="label">Mugshot Image URLs (comma separated)</div>
-    <textarea id="zoneImages"></textarea>
-
-    <button id="saveZoneBtn" class="saveBtn">Save Zone</button>
-  </div>
+<button id="saveZoneBtn" class="saveBtn" style="display:none">Save Zone</button>
+</div>
 </div>
 
-<!-- VIEWER SIDEBAR -->
 <div id="viewerSidebar" class="sidebar">
-  <button class="closeBtn" onclick="closeViewer()">×</button>
-  <div class="sidebar-content">
-    <div id="viewName" class="zone-title"></div>
-    <div id="viewCreator" class="zone-meta"></div>
-    <div id="viewInfo" class="zone-info"></div>
-    <div id="viewImages" class="mugshot-grid"></div>
-  </div>
+<button class="closeBtn" onclick="viewerSidebar.classList.remove('show')">×</button>
+<div class="sidebar-content">
+<div id="viewName" class="zone-title"></div>
+<div id="viewCreator" class="zone-meta"></div>
+<div id="viewInfo" class="zone-info"></div>
+<div id="viewImages" class="mugshot-grid"></div>
+</div>
 </div>
 
 <script>
-/* ================= MAP ================= */
+const API="https://dao-active-injunctions.onrender.com";
+
 const bounds=[[0,0],[3500,3500]];
 const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:5,maxBounds:bounds});
 L.imageOverlay('./lsmap.jpeg',bounds).addTo(map);
-map.fitBounds(bounds); map.setZoom(1);
+map.fitBounds(bounds);map.setZoom(1);
 
-/* ================= AUTH ================= */
-const params=new URLSearchParams(window.location.search);
-const username=params.get('username');
-
-if(username){
-  loginBtn.style.display='none';
-  createZoneBtn.style.display='block';
-}
-
-/* ================= LOGIN ================= */
-const clientId="130";
-const redirectUri="https://dao-active-injunctions.onrender.com/auth/callback";
-loginBtn.onclick=()=>location.href=`https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
-
-/* ================= SIDEBAR CONTROL ================= */
-const editorSidebar=document.getElementById('editorSidebar');
-const viewerSidebar=document.getElementById('viewerSidebar');
-
-function openEditor(){ editorSidebar.classList.add('show'); }
-function closeEditor(){ editorSidebar.classList.remove('show'); }
-function openViewer(){ viewerSidebar.classList.add('show'); }
-function closeViewer(){ viewerSidebar.classList.remove('show'); }
-
-/* ================= ZONES ================= */
 let zones=[];
 let drawing=false;
 let tempPoints=[];
 let tempPoly=null;
+let approved=false;
 
-fetch('/zones').then(r=>r.json()).then(data=>{
-  zones=data;
-  renderZones();
+const params=new URLSearchParams(window.location.search);
+const username=params.get('username');
+
+if(username){
+loginBtn.style.display='none';
+createZoneBtn.style.display='block';
+}
+
+loginBtn.onclick=()=>{
+location.href=`https://ucp.gta.world/oauth/authorize?client_id=130&redirect_uri=${encodeURIComponent("https://dao-active-injunctions.onrender.com/auth/callback")}&response_type=code`
+};
+
+function fetchZones(){
+fetch(`${API}/zones`)
+.then(r=>r.json())
+.then(data=>{
+zones=data;
+renderZones();
 });
+}
 
 function renderZones(){
-  zones.forEach(z=>{
-    const poly=L.polygon(z.points,{color:z.color,fillOpacity:z.fillOpacity}).addTo(map)
-      .bindTooltip(z.name,{direction:"center"});
+zones.forEach(z=>{
+const poly=L.polygon(z.points,{
+color:z.color,fillOpacity:z.fillOpacity
+}).addTo(map).bindTooltip(z.name,{direction:"center"});
 
-    poly.on('click',()=>showZone(z));
-  });
+poly.on('click',()=>showZone(z));
+});
 }
 
-/* ================= VIEW ZONE ================= */
 function showZone(z){
-  document.getElementById('viewName').textContent=z.name;
-  document.getElementById('viewCreator').textContent=`Created by: ${z.createdBy}`;
-  document.getElementById('viewInfo').textContent=z.info||"";
-
-  const imgDiv=document.getElementById('viewImages');
-  imgDiv.innerHTML="";
-  (z.images||[]).forEach(u=>{
-    const img=document.createElement('img');
-    img.src=u;
-    imgDiv.appendChild(img);
-  });
-
-  openViewer();
+viewName.textContent=z.name;
+viewCreator.textContent="Created by: "+z.createdBy;
+viewInfo.textContent=z.info||"";
+viewImages.innerHTML="";
+(z.images||[]).forEach(u=>{
+const img=document.createElement('img');
+img.src=u;
+viewImages.appendChild(img);
+});
+viewerSidebar.classList.add('show');
 }
 
-/* ================= CREATE ZONE ================= */
 createZoneBtn.onclick=()=>{
-  if(!username) return;
-  const pass=prompt("Enter DAO password:");
-  if(pass!=="daopassword2026") return alert("Incorrect password");
-  drawing=true;
-  tempPoints=[];
-  if(tempPoly) map.removeLayer(tempPoly);
-  openEditor();
+if(!username)return alert("Login required");
+const pass=prompt("Enter DAO password:");
+if(pass!=="daopassword2026")return alert("Incorrect password");
+
+approved=true;
+saveZoneBtn.style.display='block';
+drawing=true;
+tempPoints=[];
+if(tempPoly)map.removeLayer(tempPoly);
+editorSidebar.classList.add('show');
 };
 
 map.on('click',e=>{
-  if(!drawing) return;
-  tempPoints.push([e.latlng.lat,e.latlng.lng]);
-  if(tempPoly) map.removeLayer(tempPoly);
-  tempPoly=L.polygon(tempPoints,{
-    color:zoneColor.value,
-    fillOpacity:parseFloat(zoneOpacity.value)
-  }).addTo(map);
+if(!drawing)return;
+tempPoints.push([e.latlng.lat,e.latlng.lng]);
+if(tempPoly)map.removeLayer(tempPoly);
+tempPoly=L.polygon(tempPoints,{
+color:zoneColor.value,
+fillOpacity:parseFloat(zoneOpacity.value)
+}).addTo(map);
 });
 
-/* ================= SAVE ================= */
 saveZoneBtn.onclick=()=>{
-  const name=zoneName.value;
-  if(!name) return alert("Name required");
+if(!approved)return;
 
-  const zone={
-    name,
-    points:tempPoints,
-    username,
-    password:"daopassword2026",
-    color:zoneColor.value,
-    fillOpacity:parseFloat(zoneOpacity.value),
-    info:zoneInfo.value,
-    images:zoneImages.value.split(',').map(s=>s.trim()).filter(Boolean)
-  };
-
-  fetch('/zones',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(zone)
-  })
-  .then(r=>r.json())
-  .then(z=>{
-    zones.push(z);
-    renderZones();
-    drawing=false;
-    closeEditor();
-    if(tempPoly) map.removeLayer(tempPoly);
-  });
+const zone={
+name:zoneName.value,
+points:tempPoints,
+username,
+password:"daopassword2026",
+color:zoneColor.value,
+fillOpacity:parseFloat(zoneOpacity.value),
+info:zoneInfo.value,
+images:zoneImages.value.split(',').map(s=>s.trim()).filter(Boolean)
 };
-</script>
-</body>
-</html>
+
+fetch(`${API}/zones`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify(zone)
+})
+.then(r=>r.json())
+.then(z=>{
+zones.push(z);
+renderZones();
+drawing=false;
+editorSidebar.classList.remove('show'
