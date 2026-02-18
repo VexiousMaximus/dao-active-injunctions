@@ -5,54 +5,59 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; }
-    #map { height:100vh; width:100vw; background:#c9f7f7; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family: 'Segoe UI', sans-serif; }
+    #map { height:100vh; width:100vw; background:#e6f2f2; }
+
     .leaflet-interactive:focus { outline:none; }
 
     /* Buttons */
-    #loginBtn, #createZoneBtn {
-      position:absolute; right:20px; padding:10px 20px; border:none; border-radius:5px;
-      font-weight:bold; font-size:14px; cursor:pointer; z-index:2000; transition: all 0.2s ease;
+    .btn {
+      position:absolute; right:20px; padding:10px 20px; border:none;
+      border-radius:12px; font-weight:bold; font-size:14px;
+      cursor:pointer; z-index:2000; transition: all 0.2s ease;
+      box-shadow:0 3px 8px rgba(0,0,0,0.2);
     }
-    #loginBtn { top:20px; background:#ff4444; color:white; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-    #loginBtn:hover { background:#ff2222; }
-    #createZoneBtn { top:60px; background:#2288ff; color:white; display:none; }
-    #createZoneBtn:hover { background:#0066ff; }
+    .btn:hover { opacity:0.9; }
+    #loginBtn { top:20px; background:#ff4d4d; color:white; }
+    #createZoneBtn { top:60px; background:#3388ff; color:white; display:none; }
+    #undoPointBtn { top:100px; background:#ffaa00; color:white; display:none; }
 
-    /* Right sidebar: zone creation */
-    #sidebarCreate {
-      position:absolute; top:0; right:-380px; width:380px; height:100%; background:#fff; box-shadow:-2px 0 10px rgba(0,0,0,0.3);
-      padding:20px; overflow-y:auto; transition:right 0.3s ease; z-index:2500;
+    /* Sidebars */
+    .sidebar {
+      position:absolute; top:0; width:360px; height:100%; background:#fff;
+      box-shadow:0 0 15px rgba(0,0,0,0.25); padding:20px; overflow-y:auto;
+      transition: all 0.3s ease; border-radius:12px;
+      z-index:2500;
     }
+    #sidebarCreate { right:-400px; }
     #sidebarCreate.active { right:0; }
-
-    /* Left sidebar: info display */
-    #sidebarInfo {
-      position:absolute; top:0; left:-380px; width:380px; height:100%; background:#f9f9f9; box-shadow:2px 0 10px rgba(0,0,0,0.3);
-      padding:20px; overflow-y:auto; transition:left 0.3s ease; z-index:2500;
-    }
+    #sidebarInfo { left:-400px; }
     #sidebarInfo.active { left:0; }
 
-    .closeBtn { position:absolute; top:10px; right:10px; font-weight:bold; cursor:pointer; font-size:18px; color:#555; }
+    .closeBtn { position:absolute; top:12px; right:12px; font-weight:bold;
+                cursor:pointer; font-size:18px; color:#555; }
     .closeBtn:hover { color:#000; }
 
-    #sidebarCreate h2, #sidebarInfo h2 { margin-top:0; font-size:18px; }
-    #sidebarCreate label, #sidebarInfo label { display:block; margin-top:10px; font-weight:bold; }
-    #sidebarCreate input, #sidebarCreate textarea { width:100%; padding:5px; margin-top:5px; box-sizing:border-box; }
-    .mugshot-container { display:flex; align-items:center; margin-top:5px; }
-    .mugshot-container input { flex:1; margin-left:5px; padding:3px; }
-    #sidebarInfo img.mugshot { width:150px; height:150px; object-fit:cover; margin-top:5px; display:block; }
-    #sidebarCreate button, #sidebarInfo button { margin-top:10px; padding:8px 12px; cursor:pointer; }
+    .sidebar h2 { margin-top:0; font-size:20px; font-weight:600; }
+    .sidebar label { display:block; margin-top:12px; font-weight:600; }
+    .sidebar input, .sidebar textarea { width:100%; padding:8px; margin-top:5px; border-radius:8px; border:1px solid #ccc; }
+    .sidebar button { margin-top:12px; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:bold; }
+
+    .mugshot-container { display:flex; align-items:center; margin-top:8px; gap:6px; }
+    .mugshot-container input { flex:1; padding:6px; border-radius:6px; border:1px solid #ccc; }
+    img.mugshot { width:150px; height:150px; object-fit:cover; margin-top:6px; display:block; border-radius:12px; }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
-<button id="loginBtn">Sign in with GTA World</button>
-<button id="createZoneBtn">Create New Zone</button>
 
-<div id="sidebarCreate"><span class="closeBtn" onclick="closeSidebar('create')">&times;</span></div>
-<div id="sidebarInfo"><span class="closeBtn" onclick="closeSidebar('info')">&times;</span></div>
+<button id="loginBtn" class="btn">Sign in with GTA World</button>
+<button id="createZoneBtn" class="btn">Create New Zone</button>
+<button id="undoPointBtn" class="btn">Undo Last Point</button>
+
+<div id="sidebarCreate" class="sidebar"><span class="closeBtn" onclick="closeSidebar('create')">&times;</span></div>
+<div id="sidebarInfo" class="sidebar"><span class="closeBtn" onclick="closeSidebar('info')">&times;</span></div>
 
 <script>
 const map = L.map('map',{
@@ -64,7 +69,7 @@ map.fitBounds([[0,0],[3500,3500]]);
 
 const clientId="130";
 const redirectUri="https://dao-active-injunctions.onrender.com/auth/callback";
-const githubAPI="https://dao-active-injunctions.onrender.com"; // fetch zones from backend
+const githubAPI="https://dao-active-injunctions.onrender.com";
 
 const params=new URLSearchParams(window.location.search);
 const username=params.get('username');
@@ -73,13 +78,18 @@ let daoAuthenticated=false;
 
 const sidebarCreate=document.getElementById('sidebarCreate');
 const sidebarInfo=document.getElementById('sidebarInfo');
-let editingZone=null,newZonePoints=[],tempPolygon=null;
+const undoBtn=document.getElementById('undoPointBtn');
 
+let editingZone=null,newZonePoints=[],tempPolygon=null;
+let polygonLayers=new Map(); // id -> Leaflet layer
+
+// ----------------- UI -----------------
 function closeSidebar(which){
   if(which==='create') sidebarCreate.classList.remove("active");
   if(which==='info') sidebarInfo.classList.remove("active");
 }
 
+// ----------------- Auth -----------------
 if(username){
   document.getElementById('loginBtn').style.display='none';
   document.getElementById('createZoneBtn').style.display='block';
@@ -87,26 +97,41 @@ if(username){
 
 document.getElementById('loginBtn').onclick=()=>{window.location.href=`https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;};
 
-// ================= CREATE ZONE =================
+// ----------------- Create Zone -----------------
 document.getElementById('createZoneBtn').onclick=()=>{
   if(!daoAuthenticated){
     const entered=prompt("Enter DAO password to create zone:");
     if(entered!==passwordForEdit) return alert("Incorrect password.");
     daoAuthenticated=true;
   }
-  editingZone={id:Date.now(),points:[],creator:username,color:"#0000FF",info:"",mugshots:[],name:""};
-  newZonePoints=[]; map.on('click', addPointForNewZone);
+  editingZone={id:Date.now(),points:[],creator:username,color:"#3388ff",info:"",mugshots:[],name:""};
+  newZonePoints=[];
+  map.on('click', addPointForNewZone);
+  undoBtn.style.display='block';
   showCreateSidebar(editingZone);
+};
+
+undoBtn.onclick = ()=>{
+  if(newZonePoints.length>0) newZonePoints.pop();
+  updateTempPolygon();
+  if(newZonePoints.length===0) undoBtn.style.display='none';
 };
 
 function addPointForNewZone(e){
   newZonePoints.push([e.latlng.lat,e.latlng.lng]);
-  if(tempPolygon) map.removeLayer(tempPolygon);
-  tempPolygon=L.polygon(newZonePoints,{color:editingZone.color,fillOpacity:0.4}).addTo(map);
-  editingZone.points=newZonePoints;
-  showCreateSidebar(editingZone);
+  updateTempPolygon();
+  undoBtn.style.display='block';
 }
 
+function updateTempPolygon(){
+  if(tempPolygon) map.removeLayer(tempPolygon);
+  if(newZonePoints.length>0){
+    tempPolygon=L.polygon(newZonePoints,{color:editingZone.color,fillOpacity:0.4}).addTo(map);
+  }
+  editingZone.points = newZonePoints;
+}
+
+// ----------------- Sidebar Create -----------------
 function showCreateSidebar(zone){
   sidebarCreate.innerHTML=`<span class="closeBtn" onclick="closeSidebar('create')">&times;</span>
     <h2>Editing Zone</h2>
@@ -115,8 +140,8 @@ function showCreateSidebar(zone){
     <label>Info:</label><textarea id="zoneInfo">${zone.info}</textarea>
     <label>Mugshots:</label><div id="mugshotList"></div>
     <button id="addMugshotBtn">Add Mugshot</button>
-    <button id="saveZoneBtn">Save Zone</button>
-    <button id="deleteZoneBtn">Delete Zone</button>`;
+    <button id="saveZoneBtn" style="background:#28a745;color:white;">Save Zone</button>
+    <button id="deleteZoneBtn" style="background:#dc3545;color:white;">Delete Zone</button>`;
   sidebarCreate.classList.add("active");
 
   function addMugshotInput(url="",label=""){
@@ -124,63 +149,79 @@ function showCreateSidebar(zone){
     container.className="mugshot-container";
     container.innerHTML=`<input type="text" placeholder="Imgur URL" value="${url}">
                          <input type="text" placeholder="Label" value="${label}">`;
-    container.querySelectorAll("input")[0].oninput=e=>container.dataset.url=e.target.value;
-    container.querySelectorAll("input")[1].oninput=e=>container.dataset.label=e.target.value;
     document.getElementById('mugshotList').appendChild(container);
   }
 
   zone.mugshots.forEach(m=>addMugshotInput(m.url,m.label));
-
   document.getElementById('addMugshotBtn').onclick=()=>addMugshotInput();
-
-  document.getElementById('zoneName').oninput=e=>{zone.name=e.target.value;updateTempPolygon();}
-  document.getElementById('zoneColor').oninput=e=>{zone.color=e.target.value;updateTempPolygon();}
+  document.getElementById('zoneName').oninput=e=>{zone.name=e.target.value; updateTempPolygon();}
+  document.getElementById('zoneColor').oninput=e=>{zone.color=e.target.value; updateTempPolygon();}
   document.getElementById('zoneInfo').oninput=e=>{zone.info=e.target.value;}
   document.getElementById('saveZoneBtn').onclick=saveZone;
   document.getElementById('deleteZoneBtn').onclick=deleteZone;
 }
 
-function updateTempPolygon(){
-  if(tempPolygon) map.removeLayer(tempPolygon);
-  tempPolygon=L.polygon(newZonePoints,{color:editingZone.color,fillOpacity:0.4}).addTo(map);
-}
-
+// ----------------- Save/Delete Zone -----------------
 async function saveZone(){
   const mugshots=[];
   document.querySelectorAll("#mugshotList .mugshot-container").forEach(c=>{
     if(c.querySelectorAll("input")[0].value) mugshots.push({url:c.querySelectorAll("input")[0].value,label:c.querySelectorAll("input")[1].value});
   });
-  editingZone.mugshots=mugshots;
+  editingZone.mugshots = mugshots;
+
   try{
     const res=await fetch(`${githubAPI}/zones`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({...editingZone,password:passwordForEdit,creator:username})
     });
     const data=await res.json();
     alert("Zone saved!");
-    map.removeLayer(tempPolygon);
-    L.polygon(data.points,{color:data.color,fillOpacity:0.4})
-      .addTo(map)
-      .bindTooltip(data.name,{direction:"center"})
-      .on('click',()=>{showInfoSidebar(data);});
+    if(tempPolygon) map.removeLayer(tempPolygon);
+
+    addPolygonToMap(data);
     sidebarCreate.classList.remove("active");
     editingZone=null; newZonePoints=[]; tempPolygon=null;
-    map.off('click',addPointForNewZone);
+    undoBtn.style.display='none';
+    map.off('click', addPointForNewZone);
   }catch(err){alert("Error saving zone"); console.error(err);}
 }
 
 async function deleteZone(){
+  if(!editingZone) return;
+  if(!confirm("Delete this zone permanently?")) return;
+
   try{
-    await fetch(`${githubAPI}/zones/${editingZone.id}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:passwordForEdit})});
+    await fetch(`${githubAPI}/zones/${editingZone.id}`,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:passwordForEdit})
+    });
     alert("Zone deleted!");
-    map.removeLayer(tempPolygon);
+    const layer = polygonLayers.get(editingZone.id);
+    if(layer) map.removeLayer(layer);
+    polygonLayers.delete(editingZone.id);
+
     sidebarCreate.classList.remove("active");
     editingZone=null; newZonePoints=[]; tempPolygon=null;
-    map.off('click',addPointForNewZone);
-    loadZones();
+    undoBtn.style.display='none';
+    map.off('click', addPointForNewZone);
   }catch(err){alert("Error deleting zone"); console.error(err);}
 }
 
+// ----------------- Polygon Helpers -----------------
+function addPolygonToMap(zone){
+  const poly = L.polygon(zone.points,{color:zone.color,fillOpacity:0.4})
+    .addTo(map)
+    .bindTooltip(zone.name,{direction:"center"})
+    .on('click',()=>{ 
+      if(daoAuthenticated) editingZone=zone, showCreateSidebar(zone);
+      else showInfoSidebar(zone);
+    });
+  polygonLayers.set(zone.id, poly);
+}
+
+// ----------------- Info Sidebar -----------------
 function showInfoSidebar(zone){
   sidebarInfo.innerHTML=`<span class="closeBtn" onclick="closeSidebar('info')">&times;</span>
     <h2>${zone.name}</h2>
@@ -190,21 +231,16 @@ function showInfoSidebar(zone){
   sidebarInfo.classList.add("active");
 }
 
+// ----------------- Load Zones -----------------
 async function loadZones(){
   try{
     const res=await fetch(`${githubAPI}/zones`);
     const data=await res.json();
-    data.forEach(zone=>{
-      L.polygon(zone.points,{color:zone.color,fillOpacity:0.4})
-        .addTo(map)
-        .bindTooltip(zone.name,{direction:"center"})
-        .on('click',()=>{showInfoSidebar(zone);});
-    });
+    data.forEach(zone=>addPolygonToMap(zone));
   }catch(err){console.error(err);}
 }
 
 loadZones();
 </script>
-
 </body>
 </html>
