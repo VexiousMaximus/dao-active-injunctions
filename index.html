@@ -29,7 +29,7 @@
       position: absolute;
       top: 20px;
       right: 20px;
-      z-index: 2000; /* high enough to be above the map */
+      z-index: 2000; /* above the map */
       padding: 10px 20px;
       background-color: #ff4444;
       color: white;
@@ -73,9 +73,8 @@
 
   L.imageOverlay('lsmap.jpeg', bounds).addTo(map);
 
-  // Start zoomed in
   map.fitBounds(bounds);
-  map.setZoom(1); // adjust this number to start closer in
+  map.setZoom(1);
 
   // ===============================
   // CTRL + CLICK COORDINATE TOOL
@@ -144,21 +143,17 @@
     { direction: "center" }
   );
 
-
   // ===============================
   // GTA WORLD LOGIN BUTTON
   // ===============================
-const clientId = "130"; // your GTAW client ID
-const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback";
+  const clientId = "130"; // Your GTAW OAuth client ID
+  const redirectUri = "https://dao-active-injunctions.onrender.com/auth/callback";
 
-document.getElementById('loginBtn').addEventListener('click', () => {
+  document.getElementById('loginBtn').addEventListener('click', () => {
     const authUrl = `https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
     window.location.href = authUrl;
-});
-
+  });
 </script>
 
 </body>
 </html>
-
-
