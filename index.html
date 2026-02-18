@@ -134,4 +134,53 @@
     try{
       const res=await fetch('/zones',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({...editin
+        body:JSON.stringify({...editingZone,password:passwordForEdit,creator:username})
+      });
+      const data=await res.json();
+      alert("Zone saved!");
+      map.removeLayer(tempPolygon);
+      L.polygon(data.points,{color:data.color,fillOpacity:0.4}).addTo(map)
+        .bindTooltip(data.name,{direction:"center"})
+        .on('click',()=>{showInfoSidebar(data);});
+      sidebarCreate.classList.remove("active");
+      editingZone=null; newZonePoints=[]; tempPolygon=null;
+      map.off('click',addPointForNewZone);
+    }catch(err){alert("Error saving zone"); console.error(err);}
+  }
+
+  async function deleteZone(){
+    try{
+      await fetch(`/zones/${editingZone.id}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:passwordForEdit})});
+      alert("Zone deleted!");
+      map.removeLayer(tempPolygon);
+      sidebarCreate.classList.remove("active");
+      editingZone=null; newZonePoints=[]; tempPolygon=null;
+      map.off('click',addPointForNewZone);
+      loadZones();
+    }catch(err){alert("Error deleting zone"); console.error(err);}
+  }
+
+  function showInfoSidebar(zone){
+    sidebarInfo.innerHTML=`<span class="closeBtn" onclick="closeSidebar('info')">&times;</span>
+      <h2>${zone.name}</h2>
+      <label>Info:</label><textarea readonly>${zone.info}</textarea>
+      <label>Created by:</label><p>${zone.creator}</p>
+      ${zone.mugshots.map(url=>`<img class="mugshot" src="${url}">`).join("")}`;
+    sidebarInfo.classList.add("active");
+  }
+
+  async function loadZones(){
+    const res=await fetch('/zones'); const data=await res.json();
+    data.forEach(zone=>{
+      L.polygon(zone.points,{color:zone.color,fillOpacity:0.4})
+        .addTo(map)
+        .bindTooltip(zone.name,{direction:"center"})
+        .on('click',()=>{showInfoSidebar(zone);});
+    });
+  }
+
+  loadZones();
+</script>
+
+</body>
+</html>
