@@ -492,5 +492,31 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1771539023289,
+    "name": "Coors Family Skinheads",
+    "points": [
+      [
+        1623.5,
+        2670.5
+      ],
+      [
+        1487.5,
+        2747.5
+      ],
+      [
+        1439.5,
+        2607.5
+      ],
+      [
+        1561,
+        2563.5
+      ]
+    ],
+    "color": "#cccfd7",
+    "info": "",
+    "mugshots": [],
+    "creator": "CertifiedKiller"
   }
 ]
