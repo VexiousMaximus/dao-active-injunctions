@@ -24,5 +24,31 @@
     "info": "HOJ / LSSD DVS",
     "mugshots": [],
     "creator": "CertifiedKiller"
+  },
+  {
+    "id": 1771514312648,
+    "name": "Mission Row Station",
+    "points": [
+      [
+        2006,
+        2098.25
+      ],
+      [
+        1964.5,
+        2096.5
+      ],
+      [
+        1971,
+        2146.75
+      ],
+      [
+        2006.5,
+        2147.5
+      ]
+    ],
+    "color": "#0000FF",
+    "info": "",
+    "mugshots": [],
+    "creator": "CertifiedKiller"
   }
 ]
