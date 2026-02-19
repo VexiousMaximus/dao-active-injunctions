@@ -6,17 +6,28 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
 
-    /* Ko-fi widget tweaks */
+/* Ko-fi widget position + scale */
 .kofi-overlay-widget {
-  left: 15px !important;
+  left: 10px !important;
   right: auto !important;
-  bottom: 20px !important;
+  bottom: 15px !important;
 
-  transform: scale(0.85);
+  transform: scale(0.75);
   transform-origin: bottom left;
 
   opacity: 0.85;
 }
+
+/* Force iframe to match scaled size */
+.kofi-overlay-widget iframe {
+  width: 300px !important;
+  height: 420px !important;
+  max-width: 300px !important;
+  max-height: 420px !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+
 
     
     html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; }
@@ -302,4 +313,5 @@ loadZones();
 
 </body>
 </html>
+
 
