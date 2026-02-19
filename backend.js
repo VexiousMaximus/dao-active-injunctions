@@ -1,9 +1,13 @@
+// =========================
+// GTAW Zone Manager Backend
+// =========================
+
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const cors = require('cors');
-const fs = require('fs');
 const crypto = require('crypto');
+
 const app = express();
 
 // -------------------------
@@ -12,8 +16,15 @@ const app = express();
 const clientId = process.env.GTAW_CLIENT_ID;
 const clientSecret = process.env.GTAW_CLIENT_SECRET;
 const redirectUri = process.env.GTAW_REDIRECT_URI;
-const whitelistFile = path.join(__dirname, 'whitelist.json');
-const ZONES_FILE = path.join(__dirname, 'zones.json');
+
+// GitHub
+const GH_TOKEN = process.env.GITHUB_TOKEN;
+const GH_OWNER = process.env.GITHUB_OWNER;
+const GH_REPO = process.env.GITHUB_REPO;
+const GH_FILE = "zones.json";
+
+// Whitelist file (local)
+const WHITELIST_FILE = path.join(__dirname, 'whitelist.json');
 
 // -------------------------
 // MIDDLEWARE
@@ -23,74 +34,117 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
 // -------------------------
-// PERSISTENT STORAGE
+// WHITELIST
+// -------------------------
+let whitelist = [];
+const fs = require('fs');
+if (fs.existsSync(WHITELIST_FILE)) {
+  whitelist = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
+}
+function isAuthorized(username) {
+  return username && whitelist.includes(username);
+}
+
+// -------------------------
+// SESSION TOKENS
+// -------------------------
+const sessions = {}; // token -> username
+
+function generateSession(username) {
+  const token = crypto.randomBytes(16).toString("hex");
+  sessions[token] = username;
+  return token;
+}
+
+// -------------------------
+// GITHUB ZONE STORAGE
 // -------------------------
 let zones = [];
-if (fs.existsSync(ZONES_FILE)) zones = JSON.parse(fs.readFileSync(ZONES_FILE, 'utf8'));
-function saveZonesToFile() { fs.writeFileSync(ZONES_FILE, JSON.stringify(zones, null, 2)); }
+let sha = null;
 
-let whitelist = [];
-if (fs.existsSync(whitelistFile)) whitelist = JSON.parse(fs.readFileSync(whitelistFile, 'utf8'));
+async function loadZonesFromGitHub() {
+  try {
+    const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+    const res = await axios.get(url, { headers: { Authorization: `Bearer ${GH_TOKEN}` } });
+    sha = res.data.sha;
+    const content = Buffer.from(res.data.content, "base64").toString("utf8");
+    zones = JSON.parse(content);
+    console.log("Loaded zones from GitHub ✅");
+  } catch (err) {
+    console.error("Failed to load zones from GitHub:", err.message);
+    zones = [];
+  }
+}
 
-// Session token → username map (in-memory)
-const sessions = {};
+async function saveZonesToGitHub() {
+  try {
+    const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+    const content = Buffer.from(JSON.stringify(zones, null, 2)).toString("base64");
+    const body = { message: "Update zones via website", content, sha };
+    const res = await axios.put(url, body, { headers: { Authorization: `Bearer ${GH_TOKEN}` } });
+    sha = res.data.content.sha;
+    console.log("Saved zones to GitHub ✅");
+  } catch (err) {
+    console.error("GitHub save failed:", err.response?.data || err.message);
+    throw err;
+  }
+}
+
+// Load zones on startup
+loadZonesFromGitHub().catch(console.error);
 
 // -------------------------
 // ROUTES
 // -------------------------
 
-// Home / map page
+// Home
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // OAuth callback
 app.get('/auth/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.send("No code provided");
+  const code = req.query.code;
+  if (!code) return res.send("No code provided");
 
-    try {
-        const tokenRes = await axios.post(
-            'https://ucp.gta.world/oauth/token',
-            new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                code
-            }),
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
+  try {
+    const tokenRes = await axios.post(
+      'https://ucp.gta.world/oauth/token',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
 
-        const accessToken = tokenRes.data.access_token;
+    const accessToken = tokenRes.data.access_token;
 
-        const userRes = await axios.get('https://ucp.gta.world/api/user', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
+    const userRes = await axios.get('https://ucp.gta.world/api/user', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
 
-        const username = userRes.data.user.username;
+    const username = userRes.data.user.username;
 
-        // Check whitelist
-        if (!whitelist.includes(username)) return res.send("You are not authorized to edit zones.");
+    if (!isAuthorized(username)) return res.send("You are not authorized to edit zones.");
 
-        // Generate session token
-        const sessionToken = crypto.randomBytes(16).toString('hex');
-        sessions[sessionToken] = username;
+    const sessionToken = generateSession(username);
 
-        // Redirect with token instead of username
-        res.redirect(`/?token=${sessionToken}`);
-    } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.send("OAuth login failed");
-    }
+    res.redirect(`/?token=${sessionToken}`);
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.send("OAuth login failed");
+  }
 });
 
-// Endpoint to get username from token
+// Get username from token
 app.get('/session/:token', (req, res) => {
-    const token = req.params.token;
-    const username = sessions[token];
-    if (!username) return res.status(403).json({ error: "Invalid session token" });
-    res.json({ username });
+  const token = req.params.token;
+  const username = sessions[token];
+  if (!username) return res.status(403).json({ error: "Invalid session token" });
+  res.json({ username });
 });
 
 // -------------------------
@@ -100,60 +154,70 @@ app.get('/session/:token', (req, res) => {
 // Get all zones
 app.get('/zones', (req, res) => res.json(zones));
 
-// Save or update zone
-app.post('/zones', (req, res) => {
-    const { name, points, color, info, mugshots, creator, id, token } = req.body;
+// Create / update zone
+app.post('/zones', async (req, res) => {
+  try {
+    const { name, points, color, info, mugshots, id, token } = req.body;
     const username = sessions[token];
-    if (!username) return res.status(403).json({ error: "Invalid session token" });
-
-    if (!whitelist.includes(username)) return res.status(403).json({ error: "Not authorized" });
+    if (!isAuthorized(username)) return res.status(403).json({ error: "Not authorized" });
     if (!name || !points) return res.status(400).json({ error: "Missing name or points" });
 
     const zone = {
-        id: id || Date.now(),
-        name,
-        points,
-        color: color || "#0000FF",
-        info: info || "",
-        mugshots: mugshots || [],
-        creator: username
+      id: id || Date.now(),
+      name,
+      points,
+      color: color || "#0000FF",
+      info: info || "",
+      mugshots: mugshots || [],
+      creator: username
     };
 
     const index = zones.findIndex(z => z.id === zone.id);
     if (index >= 0) zones[index] = zone;
     else zones.push(zone);
 
-    saveZonesToFile();
+    await saveZonesToGitHub();
     res.json(zone);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save zone" });
+  }
 });
 
 // Delete zone by ID
-app.delete('/zones/:id', (req, res) => {
+app.delete('/zones/:id', async (req, res) => {
+  try {
     const { token } = req.body;
     const username = sessions[token];
-    if (!username) return res.status(403).json({ error: "Invalid session token" });
-    if (!whitelist.includes(username)) return res.status(403).json({ error: "Not authorized" });
+    if (!isAuthorized(username)) return res.status(403).json({ error: "Not authorized" });
 
     const id = parseInt(req.params.id);
     zones = zones.filter(z => z.id !== id);
-    saveZonesToFile();
+
+    await saveZonesToGitHub();
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete zone" });
+  }
 });
 
 // Delete zone by NAME
-app.post('/zones/deleteByName', (req, res) => {
+app.post('/zones/deleteByName', async (req, res) => {
+  try {
     const { token, name } = req.body;
     const username = sessions[token];
-    if (!username) return res.status(403).json({ error: "Invalid session token" });
-    if (!whitelist.includes(username)) return res.status(403).json({ error: "Not authorized" });
+    if (!isAuthorized(username)) return res.status(403).json({ error: "Not authorized" });
     if (!name) return res.status(400).json({ error: "Zone name required" });
 
     const index = zones.findIndex(z => z.name.toLowerCase() === name.toLowerCase());
     if (index === -1) return res.status(404).json({ error: "Zone not found" });
 
-    const deletedZone = zones.splice(index, 1)[0];
-    saveZonesToFile();
-    res.json({ success: true, deletedZone });
+    zones.splice(index, 1);
+
+    await saveZonesToGitHub();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete zone" });
+  }
 });
 
 // -------------------------
