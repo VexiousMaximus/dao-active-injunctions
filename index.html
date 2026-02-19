@@ -72,9 +72,25 @@ const clientId="130";
 const redirectUri="https://dao-active-injunctions.onrender.com/auth/callback";
 const githubAPI="https://dao-active-injunctions.onrender.com";
 
-const params=new URLSearchParams(window.location.search);
-const username=params.get('username');
-let daoAuthenticated=false;
+// ================= SECURE USERNAME FETCH =================
+const params = new URLSearchParams(window.location.search);
+const sessionToken = params.get('token');
+let username = null;
+let daoAuthenticated = false;
+
+async function fetchUsername() {
+  if (!sessionToken) return;
+  try {
+    const res = await fetch(`${githubAPI}/session/${sessionToken}`);
+    const data = await res.json();
+    if (data.username) {
+      username = data.username;
+      document.getElementById('loginBtn').style.display='none';
+      document.getElementById('createZoneBtn').style.display='block';
+    } else alert("Invalid session token");
+  } catch (err) { console.error(err); }
+}
+fetchUsername();
 
 const sidebarCreate=document.getElementById('sidebarCreate');
 const sidebarInfo=document.getElementById('sidebarInfo');
@@ -92,23 +108,15 @@ function closeSidebar(which){
   if(which==='info') sidebarInfo.classList.remove("active");
 }
 
-if(username){
-  document.getElementById('loginBtn').style.display='none';
-  document.getElementById('createZoneBtn').style.display='block';
-}
-
 document.getElementById('loginBtn').onclick=()=>{window.location.href=`https://ucp.gta.world/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;};
 
 // ================= CREATE ZONE =================
 document.getElementById('createZoneBtn').onclick=()=>{
-  // Create empty zone immediately
+  if(!username) return alert("You must be logged in to create zones");
+
   editingZone={id:Date.now(),points:[],creator:username,color:"#0000FF",info:"",mugshots:[],name:""};
   newZonePoints=[];
-  
-  // Show sidebar immediately
   showCreateSidebar(editingZone);
-
-  // Start listening for map clicks
   map.on('click', addPointForNewZone);
 };
 
@@ -173,7 +181,7 @@ function showCreateSidebar(zone){
       const res = await fetch(`${githubAPI}/zones/deleteByName`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ username: username, name })
+        body:JSON.stringify({ token: sessionToken, name })
       });
       const data = await res.json();
       if(data.success){
@@ -200,7 +208,7 @@ async function saveZone(){
   try{
     const res=await fetch(`${githubAPI}/zones`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...editingZone,username:username,creator:username})
+      body:JSON.stringify({...editingZone,token: sessionToken, creator:username})
     });
     const data=await res.json();
     alert("Zone saved!");
@@ -217,7 +225,7 @@ async function deleteZone(){
     await fetch(`${githubAPI}/zones/${editingZone.id}`,{
       method:'DELETE',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username:username})
+      body:JSON.stringify({ token: sessionToken })
     });
     alert("Zone deleted!");
     if(tempPolygon){ map.removeLayer(tempPolygon); tempPolygon=null; }
