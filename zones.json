@@ -748,5 +748,31 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1772824239525,
+    "name": "E/S Varrio 213 Rifa",
+    "points": [
+      [
+        2531,
+        2449.5
+      ],
+      [
+        2508.5,
+        2485.5
+      ],
+      [
+        2466,
+        2458.5
+      ],
+      [
+        2486,
+        2424
+      ]
+    ],
+    "color": "#32ab30",
+    "info": "",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
