@@ -22,7 +22,12 @@
     ],
     "color": "#34aa09",
     "info": "HOJ / LSSD DVS",
-    "mugshots": [],
+    "mugshots": [
+      {
+        "url": "https://i.imgur.com/ow2i63A.png",
+        "label": "test"
+      }
+    ],
     "creator": "CertifiedKiller"
   },
   {
