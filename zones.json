@@ -817,5 +817,31 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1775403871268,
+    "name": "88 Avalon Garden Crip",
+    "points": [
+      [
+        1821,
+        2079.5
+      ],
+      [
+        1825,
+        1981.5
+      ],
+      [
+        1792.5,
+        1979
+      ],
+      [
+        1782,
+        2048.5
+      ]
+    ],
+    "color": "#399af3",
+    "info": "",
+    "mugshots": [],
+    "creator": "CertifiedKiller"
   }
 ]
