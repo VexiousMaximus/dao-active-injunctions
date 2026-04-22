@@ -857,5 +857,31 @@
     "info": "New set, more info needed",
     "mugshots": [],
     "creator": "CertifiedKiller"
+  },
+  {
+    "id": 1776874928187,
+    "name": "38 Street",
+    "points": [
+      [
+        1403.5,
+        2007.5
+      ],
+      [
+        1369,
+        2050
+      ],
+      [
+        1320,
+        2009.5
+      ],
+      [
+        1353,
+        1965.5
+      ]
+    ],
+    "color": "#389454",
+    "info": "",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
