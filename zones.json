@@ -603,5 +603,43 @@
     "info": "New set, more info needed",
     "mugshots": [],
     "creator": "CertifiedKiller"
+  },
+  {
+    "id": 1782918990250,
+    "name": "42 Marlow Park Criminals (42MPC)",
+    "points": [
+      [
+        2302.75,
+        698.25
+      ],
+      [
+        2338.75,
+        727.25
+      ],
+      [
+        2366,
+        691.75
+      ],
+      [
+        2344.75,
+        676
+      ],
+      [
+        2340.25,
+        675.25
+      ],
+      [
+        2327,
+        678.25
+      ],
+      [
+        2317.75,
+        680.25
+      ]
+    ],
+    "color": "#fd823f",
+    "info": "Known prior as BCA ",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
