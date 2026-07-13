@@ -827,5 +827,35 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1783906373998,
+    "name": "Exotic Family City Crips",
+    "points": [
+      [
+        1849.5,
+        1121.5
+      ],
+      [
+        1880.5,
+        1173
+      ],
+      [
+        1926,
+        1144.5
+      ],
+      [
+        1986,
+        1107
+      ],
+      [
+        1960,
+        1060
+      ]
+    ],
+    "color": "#2e62ff",
+    "info": "",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
