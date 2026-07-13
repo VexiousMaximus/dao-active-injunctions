@@ -1005,5 +1005,31 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1783974140822,
+    "name": "Los Vecinos 13",
+    "points": [
+      [
+        1483,
+        2303
+      ],
+      [
+        1480,
+        2353
+      ],
+      [
+        1393,
+        2337
+      ],
+      [
+        1394,
+        2296
+      ]
+    ],
+    "color": "#36fb28",
+    "info": "",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
