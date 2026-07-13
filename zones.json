@@ -1031,5 +1031,31 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1783974855742,
+    "name": "Loco Parque 13",
+    "points": [
+      [
+        1705,
+        1734
+      ],
+      [
+        1679,
+        1776
+      ],
+      [
+        1651,
+        1749
+      ],
+      [
+        1669,
+        1708
+      ]
+    ],
+    "color": "#37ff00",
+    "info": "",
+    "mugshots": [],
+    "creator": "Pandy"
   }
 ]
