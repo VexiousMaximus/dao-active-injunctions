@@ -719,5 +719,36 @@
     "info": "",
     "mugshots": [],
     "creator": "Pandy"
+  },
+  {
+    "id": 1789321281459,
+    "name": "W/S HELL GANG",
+    "points": [
+      [
+        1531.5,
+        1857.5
+      ],
+      [
+        1474.5,
+        1924.5
+      ],
+      [
+        1423,
+        1883
+      ],
+      [
+        1503,
+        1794
+      ]
+    ],
+    "color": "#ff4242",
+    "info": "",
+    "mugshots": [
+      {
+        "url": "https://mdc.gta.world/img/persons/Taeshaun_Graham.png?1789321323",
+        "label": "Taeshaun Graham"
+      }
+    ],
+    "creator": "CertifiedKiller"
   }
 ]
