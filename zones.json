@@ -750,5 +750,31 @@
       }
     ],
     "creator": "CertifiedKiller"
+  },
+  {
+    "id": 1789673855048,
+    "name": "W/S 74HCG",
+    "points": [
+      [
+        1515,
+        2028.5
+      ],
+      [
+        1551,
+        1981.5
+      ],
+      [
+        1496,
+        1927.5
+      ],
+      [
+        1457,
+        1976.5
+      ]
+    ],
+    "color": "#ff990a",
+    "info": "New crip set? Needs more info.",
+    "mugshots": [],
+    "creator": "CertifiedKiller"
   }
 ]
