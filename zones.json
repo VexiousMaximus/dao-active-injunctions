@@ -776,5 +776,44 @@
     "info": "New crip set? Needs more info.",
     "mugshots": [],
     "creator": "CertifiedKiller"
+  },
+  {
+    "id": 1789674583285,
+    "name": "Murder Park Flats",
+    "points": [
+      [
+        2150,
+        2623
+      ],
+      [
+        2156,
+        2643
+      ],
+      [
+        2285,
+        2629
+      ],
+      [
+        2297,
+        2609
+      ]
+    ],
+    "color": "#474747",
+    "info": "New Set, more info needed",
+    "mugshots": [
+      {
+        "url": "https://i.imgur.com/Qa7ZyME.jpeg",
+        "label": "Graffiti Documented 17/09/26"
+      },
+      {
+        "url": "https://i.imgur.com/wARGpTs.jpeg",
+        "label": "Graffiti Documented 17/09/26"
+      },
+      {
+        "url": "https://i.imgur.com/GWe3pvB.jpeg",
+        "label": "Graffiti Documented 17/09/26"
+      }
+    ],
+    "creator": "CertifiedKiller"
   }
 ]
